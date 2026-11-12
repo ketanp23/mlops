@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Git &amp; Version Control Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Public+Sans:ital,wght@0,400;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a single reading column of numbered sections, each section a lesson + one hands-on lab; labs read like terminals and commit graphs */
+:root{
+  --bg:#F3F6F7; --surface:#FFFFFF; --sunk:#E8EEF0; --ink:#13202A; --muted:#566570; --line:#D3DDE1;
+  --accent:#0E7563; --accent-soft:#D6EEE8; --accent-ink:#FFFFFF;
+  --c-main:#1C86B0; --c-dev:#B98306; --c-feat:#BE2F7B; --c-rel:#2C8F48; --c-hot:#CC3B2A;
+  --ok:#2C8F48; --warn:#B98306; --bad:#CC3B2A;
+  --term-bg:#0D1418; --term-fg:#D3E0E6; --term-dim:#7E929C; --term-green:#6FD3A3; --term-red:#FF8A7A; --term-yellow:#F2C66B; --term-cyan:#7CCBEA;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Public Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1519; --surface:#15212A; --sunk:#1B2933; --ink:#E4ECEF; --muted:#94A6B0; --line:#283842;
+  --accent:#3DC3A4; --accent-soft:#163A33; --accent-ink:#06201A;
+  --c-main:#4FB3DC; --c-dev:#E2B13B; --c-feat:#E863A9; --c-rel:#5BC274; --c-hot:#F06A57;
+  --ok:#5BC274; --warn:#E2B13B; --bad:#F06A57; --term-bg:#081013; color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0E1519; --surface:#15212A; --sunk:#1B2933; --ink:#E4ECEF; --muted:#94A6B0; --line:#283842;
+  --accent:#3DC3A4; --accent-soft:#163A33; --accent-ink:#06201A;
+  --c-main:#4FB3DC; --c-dev:#E2B13B; --c-feat:#E863A9; --c-rel:#5BC274; --c-hot:#F06A57;
+  --ok:#5BC274; --warn:#E2B13B; --bad:#F06A57; --term-bg:#081013; color-scheme:dark; }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto} *{animation:none!important;transition:none!important}}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16.5px;line-height:1.6;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+a{color:var(--accent)}
+code,kbd,.mono{font-family:var(--f-mono);font-size:.88em}
+p code, li code, td code{background:var(--sunk);padding:.1em .35em;border-radius:4px}
+h1,h2,h3,h4{font-family:var(--f-display);line-height:1.12;text-wrap:balance;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin-inline:calc(-1 * max(16px, env(safe-area-inset-left, 0px))) calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.bar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:14px;padding-block:10px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+.bar .brand{font-family:var(--f-mono);font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.bar .brand b{color:var(--ink);font-weight:600}
+.pct{font-family:var(--f-mono);font-size:13px;color:var(--accent);font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 12px;font-size:14px;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.progress{height:3px;background:transparent}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
+
+.drawer{position:fixed;inset:0;z-index:40;background:rgba(5,12,16,.45);display:flex;justify-content:flex-end}
+.drawer nav{background:var(--surface);width:min(360px,92vw);height:100%;overflow:auto;
+  padding:calc(18px + env(safe-area-inset-top,0px)) calc(20px + env(safe-area-inset-right,0px)) 24px 20px;border-left:1px solid var(--line)}
+.drawer .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.drawer a{display:flex;gap:12px;padding:9px 6px;border-radius:6px;text-decoration:none;color:var(--ink)}
+.drawer a:hover{background:var(--sunk)}
+.drawer a em{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:13px;padding-top:2px}
+
+/* page */
+.wrap{max-width:1040px;margin:0 auto}
+header.hero{padding-block:56px 32px}
+.eyebrow{font-family:var(--f-mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hero h1{font-size:clamp(34px,6vw,62px);font-weight:800;letter-spacing:-.02em;margin:14px 0 18px;max-width:17ch}
+.hero h1 span{color:var(--accent)}
+.lede{max-width:66ch;font-size:18px;color:var(--muted)}
+.hero-log{margin-top:28px;max-width:640px}
+
+section.lesson{padding-block:44px;border-top:1px solid var(--line)}
+.sec-no{font-family:var(--f-mono);font-size:13px;color:var(--accent);font-weight:600;display:flex;gap:10px;align-items:center}
+.sec-no span{color:var(--muted);font-weight:400}
+section.lesson h2{font-size:clamp(26px,4vw,38px);font-weight:700;letter-spacing:-.01em;margin:10px 0 14px;max-width:24ch}
+.prose{max-width:68ch}
+.prose p{margin:0 0 14px}
+.prose ul{padding-left:20px;margin:0 0 14px}
+.prose li{margin-bottom:6px}
+
+.lab{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-top:26px;overflow:hidden}
+.lab-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.lab-h h3{font-size:18px;font-weight:700}
+.lab-h small{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.lab-b{padding:18px}
+.fig{margin-top:22px}
+.fig figcaption{font-size:14.5px;color:var(--muted);max-width:72ch;margin-top:10px}
+.fig figcaption b{color:var(--ink);font-family:var(--f-mono);font-size:12.5px;margin-right:8px}
+.scroll-x{overflow-x:auto}
+.note{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 16px;border-radius:0 8px 8px 0;max-width:72ch;margin-top:20px}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px}
+.grid2 > *{min-width:0}
+
+table.t{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+table.t th,table.t td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+table.t th{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600}
+table.t td:first-child{font-weight:600}
+
+/* terminal */
+.term{background:var(--term-bg);color:var(--term-fg);font-family:var(--f-mono);font-size:13.5px;line-height:1.55;border-radius:10px;padding:14px 16px}
+.term .p{color:var(--term-green)} .term .d{color:var(--term-dim)} .term .r{color:var(--term-red)} .term .y{color:var(--term-yellow)} .term .c{color:var(--term-cyan)}
+.term-out{height:240px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.term-in{display:flex;gap:8px;align-items:center;border-top:1px solid #23323a;margin-top:10px;padding-top:10px}
+.term-in input{flex:1;min-width:0;background:transparent;border:0;color:var(--term-fg);font:inherit;outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--f-mono);font-size:12.5px;border:1px solid var(--line);background:var(--sunk);border-radius:999px;padding:5px 11px}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+
+/* lifecycle board */
+.board{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+@media (max-width:760px){.board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.col{background:var(--sunk);border-radius:10px;padding:10px;min-height:150px;min-width:0}
+.col h4{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px;display:flex;justify-content:space-between}
+.col .item{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:7px 9px;margin-bottom:6px;font-family:var(--f-mono);font-size:12.5px;display:flex;justify-content:space-between;gap:6px;align-items:center;flex-wrap:wrap}
+.col .item .nm{overflow-wrap:anywhere}
+.tag{font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:4px;letter-spacing:.03em;white-space:nowrap}
+.tag.u{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.tag.m{background:color-mix(in srgb,var(--warn) 20%,transparent);color:var(--warn)}
+.tag.s{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.tag.cl{color:var(--muted)}
+.item button.edit{font-size:11px;border:1px solid var(--line);background:var(--sunk);border-radius:5px;padding:1px 7px}
+.col .empty{font-size:12.5px;color:var(--muted);font-style:italic}
+.hash{color:var(--c-dev);font-weight:600}
+.flash{animation:fl .7s}
+@keyframes fl{from{background:var(--accent-soft)}}
+
+/* svg */
+svg text{font-family:var(--f-body)}
+svg .lbl{fill:var(--ink);font-size:13px;font-weight:600}
+svg .sub{fill:var(--muted);font-size:11px}
+svg .mono{font-family:var(--f-mono)}
+.flow path.edge{fill:none;stroke:var(--line);stroke-width:2.5;transition:stroke .2s}
+.flow path.edge.on{stroke:var(--accent);stroke-width:4;stroke-dasharray:9 6;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-30}}
+.flow .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.flow .box.on{stroke:var(--accent);stroke-width:2.5}
+.flow .elbl{font-family:var(--f-mono);font-size:11px;fill:var(--muted);font-weight:600}
+.flow .elbl.on{fill:var(--accent)}
+
+/* options & quiz */
+.opts{display:grid;gap:8px;margin-top:12px}
+.opt{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 14px}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--surface))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--surface))}
+.opt:disabled{cursor:default}
+.explain{margin-top:12px;font-size:15px;color:var(--muted)}
+.explain b{color:var(--ink)}
+.q-nav{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px;flex-wrap:wrap}
+.score{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+
+/* misc */
+.messy{font-family:var(--f-mono);font-size:13px;background:var(--sunk);border-radius:10px;padding:14px 16px}
+.messy div{padding:3px 0;display:flex;justify-content:space-between;gap:10px}
+.messy span:last-child{color:var(--muted)}
+.cmdrow{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.cmdrow code{font-size:13.5px;background:var(--sunk);padding:4px 8px;border-radius:6px;overflow-wrap:anywhere}
+.cmdrow p{margin:4px 0 0;color:var(--muted);font-size:14.5px}
+.cmdrow > div{min-width:0}
+.cmdgroup h4{font-size:15px;margin:20px 0 4px;font-family:var(--f-mono);color:var(--accent);font-weight:600;letter-spacing:.02em}
+input.filter{width:100%;max-width:420px;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;font:inherit;color:var(--ink)}
+.caps{display:grid;gap:6px;margin-top:12px}
+.caps div{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--sunk);border-radius:7px;font-size:14.5px}
+.yes{color:var(--ok);font-weight:700}.no{color:var(--bad);font-weight:700}
+.rules dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:10px 0 0}
+.rules dt{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding-top:2px}
+.rules dd{margin:0}
+.take{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:16px;margin-top:22px}
+.take article{border-top:3px solid var(--accent);background:var(--surface);padding:16px;border-radius:0 0 10px 10px}
+.take h4{font-size:19px;margin:6px 0 8px}
+.take em{font-style:normal;font-family:var(--f-mono);color:var(--muted);font-size:12.5px}
+.gloss{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:10px;margin-top:14px}
+.gloss div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:14.5px}
+.gloss b{font-family:var(--f-mono);font-size:13.5px;color:var(--accent);display:block}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:20px}
+.links a{display:block;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;text-decoration:none;color:var(--ink)}
+.links a:hover{border-color:var(--accent)}
+.links a b{font-family:var(--f-display);font-size:20px;display:block;margin:4px 0 6px}
+.links a span{color:var(--muted);font-size:14.5px}
+.links a i{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--accent)}
+.check{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px}
+.check .eyebrow{margin-right:4px}
+.ck{font-family:var(--f-mono);font-size:12px;padding:3px 9px;border-radius:999px;border:1px dashed var(--line);color:var(--muted)}
+.ck.done{border-style:solid;border-color:var(--ok);color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.guide{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-top:20px;max-width:820px}
+.guide summary{font-family:var(--f-display);font-weight:700;font-size:18px;cursor:pointer}
+.guide ol{padding-left:22px;margin:12px 0}
+.guide li{margin-bottom:8px}
+.guide p{margin:0}
+footer{padding-block:40px 60px;border-top:1px solid var(--line);color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="bar-in">
+    <div class="brand"><b>Playground</b> · Session 12 · Introduction to Version Control (Git)</div>
+    <span class="pct" id="pct">0%</span>
+    <button class="btn" id="openToc" aria-haspopup="dialog">Contents</button>
+  </div>
+  <div class="progress"><i id="prog"></i></div>
+</div>
+
+<div class="drawer" id="toc" hidden role="dialog" aria-label="Contents">
+  <nav>
+    <div class="head"><strong style="font-family:var(--f-display);font-size:20px">Contents</strong><button class="btn" id="closeToc">Close</button></div>
+    <a href="#s1"><em>01</em>The problem it solves</a>
+    <a href="#s2"><em>02</em>Centralized vs distributed</a>
+    <a href="#s3"><em>03</em>Git is not GitHub</a>
+    <a href="#s4"><em>04</em>The three states, hands-on</a>
+    <a href="#s5"><em>05</em>Clone, fetch, pull, push</a>
+    <a href="#s6"><em>06</em>Branching &amp; merging</a>
+    <a href="#s7"><em>07</em>The branching model</a>
+    <a href="#s8"><em>08</em>Command reference</a>
+    <a href="#s9"><em>09</em>Which command?</a>
+    <a href="#s10"><em>10</em>Activities</a>
+    <a href="#s11"><em>11</em>Key takeaways</a>
+  </nav>
+</div>
+
+<main class="wrap">
+<header class="hero">
+  <div class="eyebrow">Session 12 · Introduction to Version Control (Git)</div>
+  <h1>A time machine for your code, <span>with a full record of who did what.</span></h1>
+  <p class="lede">A hands-on tour of version control: why teams need it, how Git moves a change from your editor to a shared repository, and how branches let several people work at once without overwriting each other. Every lab below is live. Type commands, break things, and watch what Git does.</p>
+  <div class="term hero-log" aria-label="Example git log">
+<div><span class="hash" style="color:var(--term-yellow)">a41f9c2</span> <span class="c">(HEAD -&gt; main, origin/main)</span> Merge feature/login into main</div>
+<div><span style="color:var(--term-yellow)">7d0e113</span> Add password reset link <span class="d">— Priya, 2 hours ago</span></div>
+<div><span style="color:var(--term-yellow)">c93b5a8</span> Fix crash on empty cart <span class="d">— Arjun, yesterday</span></div>
+<div><span style="color:var(--term-yellow)">1e2f004</span> First commit <span class="d">— you, last week</span></div>
+  </div>
+</header>
+
+<!-- 01 -->
+<section class="lesson" id="s1">
+  <div class="sec-no">01 <span>What is version control?</span></div>
+  <h2>The problem it solves</h2>
+  <div class="prose">
+    <p>Version Control Systems (VCS) track changes to files over time. They let you recall any earlier version, and they let a team work on the same project without overwriting each other's work.</p>
+    <p>Software teams change code constantly. One developer builds a new feature while another fixes an unrelated bug, and each touches several files across the project's folder tree. Their changes can clash. Any change can also introduce a new bug, so testing and development run side by side until a new version is ready. Version control records every individual change by every contributor, and surfaces conflicts in an orderly way without blocking the rest of the team.</p>
+  </div>
+  <div class="grid2" style="margin-top:22px">
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">Without version control</div>
+      <div class="messy">
+        <div><span>checkout.js</span><span>Mon</span></div>
+        <div><span>checkout_final.js</span><span>Tue</span></div>
+        <div><span>checkout_final_v2.js</span><span>Wed</span></div>
+        <div><span>checkout_final_LATEST.js</span><span>Thu</span></div>
+        <div><span>checkout_final_LATEST_arjun.js</span><span>Thu</span></div>
+        <div><span>checkout_REALLY_final.js</span><span>Fri</span></div>
+      </div>
+      <p style="font-size:14.5px;color:var(--muted);margin-top:10px">Which one is live? What changed between v2 and LATEST? Whose edits are in which file? Nobody can say. Old code survives as commented-out blocks "just in case".</p>
+    </div>
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">With Git</div>
+      <div class="messy">
+        <div><span>checkout.js</span><span>one file</span></div>
+        <div><span style="color:var(--c-dev)">e81a2f0</span><span>Fix tax rounding · Arjun</span></div>
+        <div><span style="color:var(--c-dev)">5c0d7b1</span><span>Add UPI payment · you</span></div>
+        <div><span style="color:var(--c-dev)">90af113</span><span>Split shipping step · Priya</span></div>
+        <div><span style="color:var(--c-dev)">2b4e6c9</span><span>Initial checkout · you</span></div>
+      </div>
+      <p style="font-size:14.5px;color:var(--muted);margin-top:10px">One file, a labelled history behind it. Any version is a single command away, and every change has an author, a date and a reason.</p>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:22px">
+    <div class="note" style="margin-top:0"><b>Track history.</b> Who changed what, and when.</div>
+    <div class="note" style="margin-top:0"><b>Revert changes.</b> Undo a mistake by returning to a known good version.</div>
+    <div class="note" style="margin-top:0"><b>Collaborate.</b> Many people working on the same project at once.</div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section class="lesson" id="s2">
+  <div class="sec-no">02 <span>Two architectures</span></div>
+  <h2>Centralized vs distributed version control</h2>
+  <div class="prose">
+    <p>In a <b>centralized</b> system (CVCS) there is one repository on one server. Each developer checks out files, and every commit goes straight to that server. In a <b>distributed</b> system (DVCS) every developer holds a full copy of the repository, history included. You commit locally, then push to and pull from a shared server when you choose. Git is distributed.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><h3>Lab · pull the plug on the server</h3><small>toggle the model, then cut the network</small></div>
+    <div class="lab-b">
+      <div class="chips" role="group" aria-label="Model">
+        <button class="chip on" data-mode="c">Centralized</button>
+        <button class="chip" data-mode="d">Distributed (Git)</button>
+        <button class="chip" id="netBtn" aria-pressed="false" style="margin-left:auto">Take server offline</button>
+      </div>
+      <div class="grid2" style="margin-top:14px;align-items:center">
+        <div class="scroll-x"><svg id="vcsSvg" viewBox="0 0 420 260" width="100%" style="min-width:320px;max-width:520px" role="img" aria-label="Server and two developer systems"></svg></div>
+        <div>
+          <div class="eyebrow">What System A can still do</div>
+          <div class="caps" id="caps"></div>
+          <p id="capNote" style="font-size:14.5px;color:var(--muted);margin-top:10px"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="fig scroll-x">
+    <table class="t">
+      <thead><tr><th>Feature</th><th>Centralized (CVCS)</th><th>Distributed (DVCS)</th></tr></thead>
+      <tbody>
+        <tr><td>Repo location</td><td>Single central server</td><td>Every user's machine, plus a shared server</td></tr>
+        <tr><td>Offline work</td><td>Limited. You cannot commit.</td><td>Full capability. You commit locally.</td></tr>
+        <tr><td>Speed</td><td>Slower, network dependent</td><td>Fast, most operations are local</td></tr>
+        <tr><td>Branching</td><td>Expensive and complex</td><td>Cheap and instant</td></tr>
+        <tr><td>If the server is lost</td><td>History is lost with it</td><td>Any clone can restore it</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 03 -->
+<section class="lesson" id="s3">
+  <div class="sec-no">03 <span>Tool vs service</span></div>
+  <h2>Git and GitHub are different things</h2>
+  <div class="grid2" style="margin-top:6px">
+    <div class="lab" style="margin-top:0"><div class="lab-b">
+      <div class="eyebrow">The tool</div>
+      <h3 style="font-size:26px;margin:6px 0 10px">Git</h3>
+      <p style="margin:0 0 10px">An open-source distributed version control system. It runs on your own computer, handles projects from tiny to very large with speed, and coordinates work among developers.</p>
+      <p style="margin:0;color:var(--muted);font-size:15px">Works with no internet and no account. You use it from the command line or an editor.</p>
+    </div></div>
+    <div class="lab" style="margin-top:0"><div class="lab-b">
+      <div class="eyebrow">The service</div>
+      <h3 style="font-size:26px;margin:6px 0 10px">GitHub</h3>
+      <p style="margin:0 0 10px">A company that hosts Git repositories in the cloud. Its web interface makes Git easier for individuals and teams, adds pull requests and code review, and lets anyone host public repositories for free.</p>
+      <p style="margin:0;color:var(--muted);font-size:15px">It earns money from private repositories and business plans for managing teams and security. GitLab and Bitbucket offer similar services.</p>
+    </div></div>
+  </div>
+  <div class="note"><b>A useful comparison.</b> Git is like email itself; GitHub is like Gmail, one popular place to keep and share it. You can use Git without GitHub, but not GitHub without Git.</div>
+</section>
+
+<!-- 04 -->
+<section class="lesson" id="s4">
+  <div class="sec-no">04 <span>The Git lifecycle</span></div>
+  <h2>The three states, hands-on</h2>
+  <div class="prose">
+    <p>Every file in a Git project lives in one of three places. Learn these and most Git commands become obvious.</p>
+    <ul>
+      <li><b>Working directory</b>, the workbench. Where you edit files.</li>
+      <li><b>Staging area</b>, the shopping cart. You pick which changes go in the next snapshot with <code>git add</code>.</li>
+      <li><b>Repository (.git)</b>, the photo album. <code>git commit -m "msg"</code> saves the staged snapshot permanently.</li>
+    </ul>
+    <p>A fourth place, the <b>remote</b>, is a copy on a server such as GitHub. <code>git push</code> sends your commits there.</p>
+  </div>
+
+  <div class="lab">
+    <div class="lab-h"><h3>Lab · your first repository</h3><small>type commands, or click the suggested ones</small></div>
+    <div class="lab-b">
+      <div class="chips" role="group" aria-label="Scenario" id="lcScen">
+        <button class="chip on" data-scen="init">Scenario A · New project (git init)</button>
+        <button class="chip" data-scen="clone">Scenario B · Join a team project (git clone)</button>
+      </div>
+      <div class="check" id="lcCheck"></div>
+      <div class="eyebrow" style="margin-top:14px">Suggested next commands · click one or type your own</div>
+      <div class="chips" id="lcChips" style="margin-top:8px"></div>
+      <div class="term" style="margin-top:14px">
+        <div class="term-out" id="lcOut" aria-live="polite"></div>
+        <form class="term-in" id="lcForm" autocomplete="off">
+          <span class="p" id="lcPrompt">my-site $</span>
+          <input id="lcInput" aria-label="Type a git command" placeholder="git init" spellcheck="false">
+        </form>
+      </div>
+      <div class="board" id="lcBoard"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center">
+        <button class="btn" id="teamBtn">Simulate: a teammate pushes a commit</button>
+        <button class="btn" id="lcReset">Start again</button>
+        <span style="font-size:14px;color:var(--muted)">Click <b>edit</b> on any file to change it.</span>
+      </div>
+    </div>
+  </div>
+  <details class="guide" id="guide05" open>
+    <summary>How to try every command from section 05 (Scenario B)</summary>
+    <ol>
+      <li>Choose <b>Scenario B</b>. The Remote column shows the team's project on GitHub, and your folder is empty.</li>
+      <li><code>git clone https://github.com/team/my-site.git</code> copies every commit and file to your laptop and sets up <code>origin</code> for you.</li>
+      <li><code>git config user.name "Your Name"</code> and <code>git config user.email "you@example.com"</code> set who you are.</li>
+      <li>Click <b>edit</b> on <code>index.html</code> (or type <code>edit index.html</code>), then <code>git add index.html</code>.</li>
+      <li><code>git commit -m "Update heading"</code> saves it in your local repository. It is marked <i>not pushed</i>.</li>
+      <li><code>git push origin main</code> sends your commit to the Remote column.</li>
+      <li>Click <b>Simulate: a teammate pushes a commit</b>. This is Developer B. Run <code>git status</code>: it still says up to date, because you have not asked the remote yet.</li>
+      <li><code>git fetch</code> downloads the commit, but your files stay the same. <code>git status</code> now says you are behind. Then run <code>git merge origin/main</code> to bring the commit in.</li>
+      <li>Click the teammate button again, then <code>git pull origin main</code>. That is fetch and merge in one step.</li>
+    </ol>
+    <p><b>Bonus:</b> make your own commit, let the teammate push, then try <code>git push</code>. It is rejected. Run <code>git pull origin main</code> to merge their work in, then push again.</p>
+  </details>
+  <div class="note"><b>Try these on purpose.</b> Commit before setting your name. Push before adding a remote. Let a teammate push, then try to push yourself. Each produces the same error you will meet on a real machine, and the fix.</div>
+</section>
+
+<!-- 05 -->
+<section class="lesson" id="s5">
+  <div class="sec-no">05 <span>Working with a remote</span></div>
+  <h2>Clone, fetch, pull, push</h2>
+  <div class="prose"><p>Two developers, one shared remote. Each has their own working copy, staging area and local repository. Click a command to see which way the changes travel.</p></div>
+  <div class="lab">
+    <div class="lab-h"><h3>Where does each command move data?</h3><small>click a command</small></div>
+    <div class="lab-b">
+      <div class="chips" id="flowChips"></div>
+      <div class="scroll-x" style="margin-top:14px">
+        <svg class="flow" id="flowSvg" viewBox="0 0 780 330" width="100%" style="min-width:620px" role="img" aria-label="Developer A, remote repository and Developer B">
+          <defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+          <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+          <rect x="20" y="196" width="540" height="122" rx="12" fill="var(--sunk)"/>
+          <text x="34" y="306" class="sub mono">DEVELOPER A · your laptop</text>
+          <rect x="600" y="196" width="160" height="122" rx="12" fill="var(--sunk)"/>
+          <text x="614" y="306" class="sub mono">DEVELOPER B</text>
+          <rect class="box" id="b-remote" x="270" y="16" width="220" height="64" rx="32"/>
+          <text x="380" y="44" text-anchor="middle" class="lbl">Remote repository</text>
+          <text x="380" y="62" text-anchor="middle" class="sub">GitHub · origin</text>
+          <rect class="box" id="b-wc" x="40" y="214" width="140" height="64" rx="10"/>
+          <text x="110" y="242" text-anchor="middle" class="lbl">Working copy</text><text x="110" y="260" text-anchor="middle" class="sub">files you edit</text>
+          <rect class="box" id="b-st" x="220" y="214" width="140" height="64" rx="10"/>
+          <text x="290" y="242" text-anchor="middle" class="lbl">Staging area</text><text x="290" y="260" text-anchor="middle" class="sub">next snapshot</text>
+          <rect class="box" id="b-lr" x="400" y="214" width="140" height="64" rx="10"/>
+          <text x="470" y="242" text-anchor="middle" class="lbl">Local repository</text><text x="470" y="260" text-anchor="middle" class="sub">.git folder</text>
+          <rect class="box" id="b-b" x="616" y="214" width="128" height="64" rx="10"/>
+          <text x="680" y="242" text-anchor="middle" class="lbl">Their copy</text><text x="680" y="260" text-anchor="middle" class="sub">clone · pull · push</text>
+
+          <path class="edge" id="e-add" d="M182 246 L216 246" marker-end="url(#ar)"/>
+          <path class="edge" id="e-commit" d="M362 246 L396 246" marker-end="url(#ar)"/>
+          <path class="edge" id="e-push" d="M510 212 C 510 150, 480 110, 462 84" marker-end="url(#ar)"/>
+          <path class="edge" id="e-fetch" d="M420 84 C 420 130, 440 170, 448 210" marker-end="url(#ar)"/>
+          <path class="edge" id="e-pull" d="M300 84 C 240 120, 120 140, 112 210" marker-end="url(#ar)"/>
+          <path class="edge" id="e-clone" d="M272 60 C 120 70, 60 140, 66 210" marker-end="url(#ar)"/>
+          <path class="edge" id="e-b" d="M492 48 C 640 48, 690 120, 684 210" marker-end="url(#ar)" marker-start="url(#ar)"/>
+          <text class="elbl" id="t-add" x="199" y="232" text-anchor="middle">add</text>
+          <text class="elbl" id="t-commit" x="379" y="232" text-anchor="middle">commit</text>
+          <text class="elbl" id="t-push" x="516" y="140">push</text>
+          <text class="elbl" id="t-fetch" x="384" y="150">fetch</text>
+          <text class="elbl" id="t-pull" x="196" y="120">pull</text>
+          <text class="elbl" id="t-clone" x="86" y="112">clone</text>
+        </svg>
+      </div>
+      <div id="flowText" class="explain" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="note"><b>Try every command above for real.</b> The simulator in section 04 runs all of them. <a href="#s4" data-goscen="clone">Open it in Scenario B (join a team project)</a> and follow the guide under it.</div>
+  <div class="note"><b>Fetch vs pull.</b> <code>git fetch</code> downloads new commits and updates <code>origin/main</code>, but leaves your files alone so you can look first. <code>git pull</code> is fetch followed by merge, so your working files change.</div>
+</section>
+
+<!-- 06 -->
+<section class="lesson" id="s6">
+  <div class="sec-no">06 <span>Parallel universes</span></div>
+  <h2>Branching &amp; merging</h2>
+  <div class="prose">
+    <p><b>Branching</b> lets you diverge from the main line of development and keep working without disturbing it. A branch in Git is only a movable label pointing at a commit, which is why creating one is instant.</p>
+    <p><b>Merging</b> takes independent lines of development and joins them into one branch. If the target has not moved, Git simply slides the label forward (a <i>fast-forward</i>). If both sides moved, Git creates a <i>merge commit</i> with two parents. On GitHub, a <b>pull request</b> wraps a merge in code review.</p>
+  </div>
+  <div class="lab">
+    <div class="lab-h"><h3>Lab · grow a commit graph</h3><small>HEAD is the branch you are on</small></div>
+    <div class="lab-b">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button class="btn primary" id="gCommit">git commit</button>
+        <button class="btn" id="gBranch">git checkout -b new branch</button>
+        <label style="display:flex;gap:6px;align-items:center;font-size:14px">checkout
+          <select id="gCo" class="btn" style="padding:5px 8px"></select></label>
+        <label style="display:flex;gap:6px;align-items:center;font-size:14px">merge
+          <select id="gMg" class="btn" style="padding:5px 8px"></select></label>
+        <button class="btn" id="gMergeGo">into current</button>
+        <button class="btn" id="gReset">Reset</button>
+      </div>
+      <div class="scroll-x" style="margin-top:16px;background:var(--sunk);border-radius:10px"><svg id="gSvg" height="200"></svg></div>
+      <div class="term" style="margin-top:12px"><div id="gLog" style="height:110px;overflow:auto;white-space:pre-wrap"></div></div>
+    </div>
+  </div>
+  <div class="note"><b>Try this sequence.</b> Create a branch, make two commits, check out <code>main</code>, merge the branch. That is a fast-forward. Then create another branch, commit on it, switch to <code>main</code>, commit there too, and merge. Now you get a merge commit with two parents.</div>
+</section>
+
+<!-- 07 -->
+<section class="lesson" id="s7">
+  <div class="sec-no">07 <span>A team convention</span></div>
+  <h2>The branching model: master, develop and supporting branches</h2>
+  <div class="prose">
+    <p>The <code>master</code> branch at <code>origin</code> holds production code, and every commit on it is a release. Parallel to it runs <code>develop</code>, where finished work is integrated for the next release. Both live forever.</p>
+    <p>Around them sit <b>supporting branches</b> with a limited lifetime: feature, release and hotfix branches. Each has strict rules about where it starts and where it must be merged. Technically they are plain Git branches. The categories come from how the team uses them.</p>
+  </div>
+  <div class="lab">
+    <div class="lab-h"><h3>Click a branch type for its rules</h3><small>time runs downward</small></div>
+    <div class="lab-b grid2" style="align-items:start">
+      <div class="scroll-x"><svg id="gfSvg" viewBox="0 0 520 460" width="100%" style="min-width:380px" role="img" aria-label="Git flow branching model diagram"></svg></div>
+      <div class="rules" id="gfRules" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 08 -->
+<section class="lesson" id="s8">
+  <div class="sec-no">08 <span>Keep this open</span></div>
+  <h2>Command reference</h2>
+  <div class="prose"><p>Every command from the session, grouped in the order you will use them. Filter by name or purpose.</p></div>
+  <input class="filter" id="cmdFilter" placeholder="Filter: e.g. branch, remote, undo" aria-label="Filter commands">
+  <div id="cmdList" style="max-width:820px"></div>
+</section>
+
+<!-- 09 -->
+<section class="lesson" id="s9">
+  <div class="sec-no">09 <span>Check yourself</span></div>
+  <h2>Which command would you reach for?</h2>
+  <div class="lab">
+    <div class="lab-h"><h3 id="qTitle">Question 1 of 6</h3><span class="score" id="qScore">Score 0 / 0</span></div>
+    <div class="lab-b">
+      <p id="qText" style="margin:0;font-size:17px;max-width:68ch"></p>
+      <div class="opts" id="qOpts"></div>
+      <div class="explain" id="qExp" aria-live="polite"></div>
+      <div class="q-nav"><button class="btn" id="qPrev">Previous</button><button class="btn primary" id="qNext">Next question</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="lesson" id="s10">
+  <div class="sec-no">10 <span>In class</span></div>
+  <h2>Activities</h2>
+  <div class="links">
+    <a href="https://docs.github.com/en/get-started/quickstart/hello-world" target="_blank" rel="noopener">
+      <i>Activity 1 · docs.github.com</i><b>Create your first repo on GitHub</b>
+      <span>GitHub's Hello World tutorial: create a repository, start a branch, commit a change, open a pull request and merge it.</span>
+    </a>
+    <a href="https://www.gitmastery.me/" target="_blank" rel="noopener">
+      <i>Activity 2 · gitmastery.me</i><b>The Git playground</b>
+      <span>Practise the commands from this session in a safe sandbox and watch the effect of each one.</span>
+    </a>
+  </div>
+</section>
+
+<!-- 11 -->
+<section class="lesson" id="s11">
+  <div class="sec-no">11 <span>Landing</span></div>
+  <h2>Key takeaways</h2>
+  <div class="take">
+    <article><em>01</em><h4>Version control is a history, not a backup</h4><p style="margin:0">Every commit records what changed, who changed it, when, and why. That record lets a team find a bug's origin and undo it safely.</p></article>
+    <article><em>02</em><h4>Edit, stage, commit, push</h4><p style="margin:0">Files move from the working directory to the staging area with <code>git add</code>, into your local repository with <code>git commit</code>, and to the remote with <code>git push</code>.</p></article>
+    <article><em>03</em><h4>Branches are cheap, so use them</h4><p style="margin:0">Do new work on its own branch, keep <code>master</code> releasable and <code>develop</code> integrated, and bring work back with a reviewed merge.</p></article>
+  </div>
+  <h3 style="margin-top:40px;font-size:22px">Glossary</h3>
+  <input class="filter" id="glFilter" placeholder="Filter terms" aria-label="Filter glossary" style="margin-top:12px">
+  <div class="gloss" id="gloss"></div>
+</section>
+</main>
+
+<footer><div class="wrap">Session 12 · Introduction to Version Control (Git) — Interactive notes. The labs simulate Git in your browser; nothing is sent anywhere.</div></footer>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- progress & toc ---------- */
+(function(){
+  const prog=$('#prog'), pct=$('#pct');
+  function upd(){const h=document.documentElement;const max=h.scrollHeight-h.clientHeight;const p=max>0?Math.round(h.scrollTop/max*100):0;prog.style.width=p+'%';pct.textContent=p+'%';}
+  addEventListener('scroll',upd,{passive:true});upd();
+  const toc=$('#toc');
+  $('#openToc').onclick=()=>{toc.hidden=false;$('#closeToc').focus();};
+  $('#closeToc').onclick=()=>toc.hidden=true;
+  toc.addEventListener('click',e=>{if(e.target===toc||e.target.closest('a'))toc.hidden=true;});
+  addEventListener('keydown',e=>{if(e.key==='Escape')toc.hidden=true;});
+})();
+
+/* ---------- 02 CVCS vs DVCS ---------- */
+(function(){
+  let mode='c', off=false;
+  const svg=$('#vcsSvg');
+  function cyl(x,y,w,h,label,dim){
+    const op=dim?0.35:1;
+    return `<g opacity="${op}"><path d="M${x} ${y+8} v${h-16} a${w/2} 8 0 0 0 ${w} 0 v-${h-16}" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+      <ellipse cx="${x+w/2}" cy="${y+8}" rx="${w/2}" ry="8" fill="var(--surface)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="${x+w/2}" y="${y+h/2+8}" text-anchor="middle" class="sub" style="fill:var(--ink)">${label}</text></g>`;
+  }
+  function box(x,y,label){return `<rect x="${x}" y="${y}" width="110" height="46" rx="8" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/><text x="${x+55}" y="${y+28}" text-anchor="middle" class="lbl">${label}</text>`;}
+  function draw(){
+    const link=off?'stroke="var(--bad)" stroke-dasharray="5 5"':'stroke="var(--muted)"';
+    let s=`<line x1="210" y1="96" x2="85" y2="180" ${link} stroke-width="2"/><line x1="210" y1="96" x2="335" y2="180" ${link} stroke-width="2"/>`;
+    s+=cyl(160,20,100,76,'Server repo',off);
+    if(off) s+=`<path d="M190 40 l40 40 M230 40 l-40 40" stroke="var(--bad)" stroke-width="4"/>`;
+    s+=box(30,180,'System A')+box(280,180,'System B');
+    if(mode==='d'){s+=cyl(42,122,86,52,'full repo',false)+cyl(292,122,86,52,'full repo',false);}
+    s+=`<text x="210" y="250" text-anchor="middle" class="sub mono">${mode==='c'?'commit / update go to the server':'commit locally · push / pull to share'}</text>`;
+    svg.innerHTML=s;
+    const caps = mode==='c'
+      ? [['Edit files',true],['Commit a change',!off],['View full history',!off],['Create a branch',!off],['Share work with System B',!off]]
+      : [['Edit files',true],['Commit a change',true],['View full history',true],['Create a branch',true],['Share work with System B',!off]];
+    $('#caps').innerHTML=caps.map(([k,v])=>`<div><span>${k}</span><span class="${v?'yes':'no'}">${v?'Yes':'No'}</span></div>`).join('');
+    $('#capNote').textContent = !off ? 'Everything works while the network is up. Now take the server offline.'
+      : mode==='c' ? 'With a centralized system, an outage stops the whole team from committing. If the server disk dies, the history goes with it.'
+      : 'With Git, System A keeps working: it has the whole history locally. Only sharing waits until the server returns, and any clone could rebuild it.';
+  }
+  document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('on',x===b));draw();});
+  $('#netBtn').onclick=e=>{off=!off;e.target.classList.toggle('on',off);e.target.setAttribute('aria-pressed',off);e.target.textContent=off?'Bring server back online':'Take server offline';draw();};
+  draw();
+})();
+
+/* ---------- 04 lifecycle sim ---------- */
+(function(){
+  const out=$('#lcOut'), input=$('#lcInput'), board=$('#lcBoard');
+  const TEAM_URL='https://github.com/team/my-site.git';
+  const TRY=[['clone','git clone'],['add','git add'],['commit','git commit'],['push','git push'],['teammate','Developer B pushes'],['fetch','git fetch'],['pull','git pull']];
+  const T=new Set();
+  let S, scen='init', flashCols=[];
+  const hx=()=>Math.random().toString(16).slice(2,9).padEnd(7,'0');
+  const D=t=>`<span class="d">${t}</span>`, R=t=>`<span class="r">${t}</span>`;
+  function print(h){out.innerHTML+=h+'\n';out.scrollTop=out.scrollHeight;}
+  function flash(i){flashCols.push(i);}
+  function setPrompt(){$('#lcPrompt').textContent=S.cwd+' $';}
+
+  function reset(mode){
+    if(mode) scen=mode;
+    S={inited:false,files:[],work:{},index:{},head:{},local:[],remote:[],remoteSet:false,url:'',name:null,email:null,
+       stash:[],team:0,fetched:new Set(),cwd:'my-site',upstream:[]};
+    out.innerHTML='';
+    if(scen==='init'){
+      S.files=['index.html','style.css','README.md']; S.files.forEach(f=>S.work[f]=1);
+      print(D('# Scenario A: a folder called my-site with three files. It is not a Git repository yet.\n# Start with: git init'));
+    } else {
+      S.cwd='~/projects';
+      S.upstream=[{hash:hx(),msg:'Add homepage styles',by:'Priya'},{hash:hx(),msg:'Initial commit',by:'Priya'}];
+      print(D(`# Scenario B: you have joined a team. Their project is on GitHub at\n#   ${TEAM_URL}\n# Your projects folder is empty. Get your own copy with git clone.`));
+    }
+    setPrompt();
+    document.querySelectorAll('[data-scen]').forEach(b=>b.classList.toggle('on',b.dataset.scen===scen));
+    render();
+  }
+
+  const inLocal=h=>S.local.some(l=>l.hash===h);
+  const isStaged=f=>f in S.index && S.index[f]!==S.head[f];
+  const isMod=f=>f in S.index && S.work[f]!==S.index[f];
+  const isUntr=f=>!(f in S.index);
+  const aheadList=()=>S.local.filter(l=>!S.remote.some(r=>r.hash===l.hash));
+  const unfetched=()=>S.remote.filter(r=>!inLocal(r.hash)&&!S.fetched.has(r.hash));
+  const fetchedUnmerged=()=>S.remote.filter(r=>!inLocal(r.hash)&&S.fetched.has(r.hash));
+  const pl=n=>n===1?'':'s';
+
+  function statusText(){
+    const st=S.files.filter(isStaged), md=S.files.filter(isMod), un=S.files.filter(isUntr);
+    let o='On branch main\n';
+    if(S.remoteSet && S.remote.length){
+      const ahead=aheadList().length, behind=fetchedUnmerged().length;
+      if(ahead&&behind) o+=`Your branch and 'origin/main' have diverged,\nand have ${ahead} and ${behind} different commits each, respectively.\n  (use "git pull" to merge the remote branch into yours)\n`;
+      else if(behind) o+=`Your branch is behind 'origin/main' by ${behind} commit${pl(behind)}, and can be fast-forwarded.\n  (use "git pull" or "git merge origin/main" to update your local branch)\n`;
+      else if(ahead) o+=`Your branch is ahead of 'origin/main' by ${ahead} commit${pl(ahead)}.\n  (use "git push" to publish your local commits)\n`;
+      else o+=`Your branch is up to date with 'origin/main'.\n`;
+    }
+    if(!S.local.length) o+='\nNo commits yet\n';
+    if(st.length) o+='\nChanges to be committed:\n'+st.map(f=>`<span style="color:var(--term-green)">\t${f in S.head?'modified':'new file'}:   ${f}</span>`).join('\n')+'\n';
+    if(md.length) o+='\nChanges not staged for commit:\n'+md.map(f=>R(`\tmodified:   ${f}`)).join('\n')+'\n';
+    if(un.length) o+='\nUntracked files:\n  (use "git add &lt;file&gt;..." to include in what will be committed)\n'+un.map(f=>R('\t'+f)).join('\n')+'\n';
+    if(!st.length&&!md.length&&!un.length) o+='\nnothing to commit, working tree clean';
+    return o.trimEnd();
+  }
+  function applyRemoteFiles(cs){
+    cs.forEach(c=>{ if(c.file){const f=c.file; if(!S.files.includes(f))S.files.push(f);
+      const oldIdx=S.index[f]; S.head[f]=c.v; S.index[f]=c.v; if(S.work[f]===undefined||S.work[f]===oldIdx)S.work[f]=c.v;} });
+  }
+  /* bring remote commits (newest first) into local main */
+  function mergeIn(list){
+    const ahead=aheadList(), base=S.local.filter(l=>S.remote.some(r=>r.hash===l.hash));
+    applyRemoteFiles(list.slice().reverse()); list.forEach(c=>S.fetched.add(c.hash));
+    const files=[...new Set(list.filter(c=>c.file).map(c=>c.file))].map(f=>` ${f} | 1 +`).join('\n');
+    if(ahead.length){
+      S.local=[{hash:hx(),msg:"Merge branch 'main' of origin",by:S.name||'you'},...ahead,...list,...base];
+      return `Merge made by the 'ort' strategy.\n${files}\n`+D('# Your unpushed commits and theirs are joined by a merge commit. Now git push will work.');
+    }
+    const from=S.local[0]?S.local[0].hash:'0000000';
+    S.local=[...list,...base];
+    return `Updating ${from}..${list[0].hash}\nFast-forward\n${files}`;
+  }
+  function editFile(f){
+    if(!S.files.includes(f)){S.files.push(f); S.work[f]=1; print(D(`# you created a new file ${f}`));}
+    else {S.work[f]=(S.work[f]||0)+1; print(D(`# you edited ${f} in your editor (now v${S.work[f]})`));}
+    flash(0);
+  }
+
+  function run(raw){
+    const line=raw.trim(); if(!line)return;
+    print(`<span class="p">${esc(S.cwd)} $</span> ${esc(line)}`);
+    const tok=(line.match(/"[^"]*"|“[^”]*”|'[^']*'|\S+/g)||[]).map(t=>t.replace(/^["“']|["”']$/g,''));
+    const cmd=tok[0];
+    if(cmd==='clear'){out.innerHTML='';return;}
+    if(cmd==='help'){print('Try: git clone &lt;url&gt; · git init · git status · git add . · git commit -m "msg"\n     git log --oneline · git diff · git config user.name "You" · git remote add origin &lt;url&gt;\n     git push origin main · git fetch · git merge origin/main · git pull origin main\n     git stash · git stash pop · git branch --all · edit &lt;file&gt; · ls · clear');return;}
+    if(cmd==='ls'){print(S.files.length?S.files.join('  ')+(S.inited?'  '+D('.git/'):''):(scen==='clone'&&!S.inited?D('(empty folder)'):''));return;}
+    if(cmd==='cd'){print(D(S.inited?'# you are already inside my-site':'# nothing to change into yet'));return;}
+    if(['edit','nano','code','vim'].includes(cmd)){
+      if(!tok[1]){print(D('usage: edit &lt;file&gt;   (simulates changing a file in your editor)'));return;}
+      if(scen==='clone'&&!S.inited){print(D('# Nothing to edit yet. Clone the project first.'));return;}
+      editFile(tok[1]); render(); return;
+    }
+    if(cmd!=='git'){print(R(`${esc(cmd)}: command not found`)+' '+D('(type help)'));return;}
+    const c=tok[1], a=tok.slice(2);
+
+    if(c==='clone'){
+      if(scen==='init'){print(S.inited?R("fatal: destination path 'my-site' already exists and is not an empty directory."):D('# This folder already holds your own files. Choose Scenario B above to practise git clone.'));return;}
+      if(S.inited){print(R("fatal: destination path 'my-site' already exists and is not an empty directory."));return;}
+      if(!a[0]){print(R('fatal: You must specify a repository to clone.')+'\n\nusage: git clone &lt;repo&gt;');return;}
+      if(a[0].replace(/\/$/,'')!==TEAM_URL&&a[0].replace(/\/$/,'')!==TEAM_URL.replace(/\.git$/,'')){print(R(`fatal: repository '${esc(a[0])}' not found`)+'\n'+D(`# In this lab the team repository is ${TEAM_URL}`));return;}
+      S.inited=true; S.remoteSet=true; S.url=TEAM_URL; S.remote=S.upstream.slice(); S.local=S.remote.slice();
+      S.remote.forEach(r=>S.fetched.add(r.hash));
+      S.files=['index.html','style.css','README.md']; S.files.forEach(f=>{S.work[f]=1;S.index[f]=1;S.head[f]=1;});
+      S.cwd='my-site'; setPrompt(); T.add('clone');
+      print(`Cloning into 'my-site'...\nremote: Enumerating objects: 9, done.\nReceiving objects: 100% (9/9), done.\n`+D(`# You now have every commit and every file. origin already points at the team repository,\n# so push and pull work straight away. (You are now inside my-site.)`));
+      flash(0);flash(2);render();return;
+    }
+    if(c==='init'){
+      if(scen==='clone'&&!S.inited){print(D('# In this scenario the project already exists on GitHub, so use git clone instead of git init.'));return;}
+      if(S.inited){print('Reinitialized existing Git repository in /home/you/my-site/.git/');}
+      else {S.inited=true;print('Initialized empty Git repository in /home/you/my-site/.git/\n'+D('# A hidden .git folder now holds the repository. Your files are untouched.'));}
+      render(); return;
+    }
+    if(!S.inited){print(R('fatal: not a git repository (or any of the parent directories): .git')+'\n'+D(scen==='clone'?'# Run git clone first.':'# Run git init first.'));return;}
+    switch(c){
+      case 'status': print(statusText()); break;
+      case 'add': {
+        if(!a.length){print("Nothing specified, nothing added.\n"+D("hint: maybe you wanted to say 'git add .'?"));break;}
+        const list = a.includes('.')||a.includes('-A')||a.includes('--all') ? S.files : a;
+        let n=0; for(const f of list){ if(!S.files.includes(f)){print(R(`fatal: pathspec '${esc(f)}' did not match any files`));continue;} if(S.index[f]!==S.work[f]){S.index[f]=S.work[f];n++;} }
+        if(n){T.add('add');flash(1);}
+        print(n?D(`# ${n} file${pl(n)} moved into the staging area. Check with git status.`):D('# nothing new to stage. Edit a file first (click edit, or type edit index.html).'));
+        break; }
+      case 'commit': {
+        const mi=a.indexOf('-m'); const msg=mi>=0?a[mi+1]:null;
+        if(!S.name||!S.email){print(R('Author identity unknown')+'\n\n*** Please tell me who you are.\n\nRun\n\n  git config user.email "you@example.com"\n  git config user.name "Your Name"');break;}
+        if(!msg){print(R("error: switch `m' requires a value")+' '+D('— use git commit -m "describe the change"'));break;}
+        const ch=S.files.filter(isStaged);
+        if(!ch.length){print(S.files.some(f=>isMod(f)||isUntr(f))?'no changes added to commit (use "git add" and/or "git commit -a")':'nothing to commit, working tree clean');break;}
+        const h=hx(); const root=!S.local.length;
+        ch.forEach(f=>S.head[f]=S.index[f]);
+        S.local.unshift({hash:h,msg,by:S.name});
+        print(`[main ${root?'(root-commit) ':''}${h}] ${esc(msg)}\n ${ch.length} file${pl(ch.length)} changed`);
+        T.add('commit'); flash(2); break; }
+      case 'log': {
+        if(!S.local.length){print(R("fatal: your current branch 'main' does not have any commits yet"));break;}
+        const tip=S.remote.find(r=>inLocal(r.hash)||S.fetched.has(r.hash));
+        const one=a.includes('--oneline');
+        const lab=(cm,i)=>{const p=[]; if(i===0)p.push('HEAD -&gt; main'); if(S.remoteSet&&tip&&tip.hash===cm.hash)p.push('origin/main'); return p.length?` <span class="c">(${p.join(', ')})</span>`:'';};
+        print(S.local.map((cm,i)=>one?`<span class="y">${cm.hash}</span>${lab(cm,i)} ${esc(cm.msg)}`
+          :`<span class="y">commit ${cm.hash}</span>${lab(cm,i)}\nAuthor: ${esc(cm.by)}\n\n    ${esc(cm.msg)}\n`).join('\n'));
+        if(fetchedUnmerged().length) print(D(`# origin/main is ${fetchedUnmerged().length} commit${pl(fetchedUnmerged().length)} ahead of you (fetched, not merged).`));
+        break; }
+      case 'diff': {
+        const md=S.files.filter(isMod);
+        if(!md.length){print(D('# no unstaged changes (git diff compares working directory with staging area)'));break;}
+        md.forEach(f=>print(`<span style="font-weight:600">diff --git a/${f} b/${f}</span>\n`+R(`- line written in version ${S.index[f]}`)+`\n<span style="color:var(--term-green)">+ line written in version ${S.work[f]}</span>`));
+        break; }
+      case 'config': {
+        const k=a[0]==='--global'?a[1]:a[0], v=(a[0]==='--global'?a.slice(2):a.slice(1)).join(' ');
+        if(k==='user.name'&&v){S.name=v;print(D(`# name set to ${esc(v)}`));}
+        else if(k==='user.email'&&v){S.email=v;print(D(`# email set to ${esc(v)}`));}
+        else print(D('usage: git config user.name "Your Name" | git config user.email "you@example.com"'));
+        break; }
+      case 'remote': {
+        if(a[0]==='add'&&a[1]==='origin'&&a[2]){ if(S.remoteSet){print(R('error: remote origin already exists.'));} else {S.remoteSet=true;S.url=a[2];print(D(`# origin now points at ${esc(a[2])}`));} }
+        else if(a[0]==='-v'||!a.length){print(S.remoteSet?(a[0]==='-v'?`origin\t${esc(S.url)} (fetch)\norigin\t${esc(S.url)} (push)`:'origin'):'');}
+        else print(D('usage: git remote add origin &lt;git_repo_url&gt;'));
+        break; }
+      case 'push': {
+        if(!S.remoteSet){print(R("fatal: 'origin' does not appear to be a git repository")+'\n'+D('# Add one first: git remote add origin https://github.com/you/my-site.git'));break;}
+        if(!S.local.length){print(R('error: src refspec main does not match any')+'\n'+D('# You have no commits to push yet.'));break;}
+        if(S.remote.some(r=>!inLocal(r.hash))){print(R(' ! [rejected]        main -&gt; main (fetch first)')+'\nerror: failed to push some refs to '+esc(S.url)+'\n'+D('hint: Updates were rejected because the remote contains work that you do not\nhint: have locally. Run git pull origin main (or git fetch, then git merge origin/main),\nhint: then push again.'));break;}
+        if(!aheadList().length){print('Everything up-to-date');break;}
+        const from=S.remote[0]?S.remote[0].hash:'0000000';
+        S.remote=S.local.slice(); S.remote.forEach(r=>S.fetched.add(r.hash));
+        print(`To ${esc(S.url)}\n   ${from}..${S.local[0].hash}  main -&gt; main`); T.add('push'); flash(3); break; }
+      case 'fetch': {
+        if(!S.remoteSet){print(R("fatal: 'origin' does not appear to be a git repository"));break;}
+        T.add('fetch');
+        const nu=unfetched();
+        if(nu.length){nu.forEach(r=>S.fetched.add(r.hash));
+          print(`From ${esc(S.url)}\n   ${S.local[0]?S.local[0].hash:'0000000'}..${nu[0].hash}  main       -&gt; origin/main\n`+D(`# ${nu.length} new commit${pl(nu.length)} downloaded into origin/main. Your files have NOT changed.\n# Run git status to see you are behind, then git merge origin/main (or git pull) to bring them in.`));
+          flash(2);
+        } else print(D(fetchedUnmerged().length?'# nothing new on the remote. You already fetched commits that are not merged yet: run git merge origin/main.':'# (no output) nothing new on the remote'));
+        break; }
+      case 'merge': {
+        if(a[0]!=='origin/main'){print(D('# In this lab you can merge origin/main. Merging your own branches has its own lab in section 06.'));break;}
+        if(!S.remoteSet){print(R("merge: origin/main - not something we can merge"));break;}
+        const list=fetchedUnmerged();
+        if(!list.length){print('Already up to date.'+(unfetched().length?'\n'+D('# The remote has commits you have not fetched yet. Run git fetch first.'):''));break;}
+        print(mergeIn(list)); flash(0); flash(2); break; }
+      case 'pull': {
+        if(!S.remoteSet){print(R("fatal: 'origin' does not appear to be a git repository"));break;}
+        T.add('pull');
+        const list=S.remote.filter(r=>!inLocal(r.hash));
+        if(!list.length){print('Already up to date.');break;}
+        print(`From ${esc(S.url)}\n * branch            main       -&gt; FETCH_HEAD\n`+mergeIn(list)); flash(0); flash(2); break; }
+      case 'stash': {
+        if(a[0]==='pop'||a[0]==='apply'){ if(!S.stash.length){print(R('error: No stash entries found.'));break;}
+          const st=a[0]==='pop'?S.stash.pop():S.stash[S.stash.length-1]; Object.assign(S.work,st.work); Object.assign(S.index,st.index);
+          print(D(`# Changes restored to your working directory${a[0]==='pop'?' and the stash entry dropped':''}.`)); flash(0); break; }
+        if(a[0]==='list'){print(S.stash.map((s,i)=>`stash@{${i}}: WIP on main`).reverse().join('\n')||'');break;}
+        const t=S.files.filter(f=>f in S.head && (S.work[f]!==S.head[f]||S.index[f]!==S.head[f]));
+        if(!t.length){print('No local changes to save');break;}
+        const st={work:{},index:{}}; t.forEach(f=>{st.work[f]=S.work[f];st.index[f]=S.index[f];S.work[f]=S.head[f];S.index[f]=S.head[f];});
+        S.stash.push(st);
+        print(`Saved working directory and index state WIP on main: ${S.local[0].hash} ${esc(S.local[0].msg)}\n`+D(`# ${t.length} file${pl(t.length)} put aside. Your working directory is clean. git stash pop brings them back.`)); flash(0); break; }
+      case 'branch': print('* main'+((a.includes('--all')||a.includes('-a'))&&S.remoteSet?'\n  remotes/origin/main':'')); break;
+      case 'checkout': print(D('# Branching has its own lab in section 06.')); break;
+      default: print(R(`git: '${esc(c||'')}' is not a git command in this lab.`)+' '+D('Type help.'));
+    }
+    render();
+  }
+
+  function render(){
+    const fileRow=f=>{
+      let tags=[];
+      if(!S.inited) tags.push('<span class="tag cl">plain file</span>');
+      else { if(isUntr(f))tags.push('<span class="tag u">untracked</span>'); if(isStaged(f))tags.push('<span class="tag s">staged</span>'); if(isMod(f))tags.push('<span class="tag m">modified</span>'); if(!tags.length)tags.push('<span class="tag cl">committed</span>'); }
+      return `<div class="item"><span class="nm">${esc(f)} <span style="color:var(--muted)">v${S.work[f]}</span></span><span style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">${tags.join('')}<button class="edit" data-edit="${esc(f)}" aria-label="Edit ${esc(f)}">edit</button></span></div>`;};
+    const staged=S.inited?S.files.filter(isStaged):[];
+    const ahead=aheadList();
+    const commitRow=(cm,mark)=>`<div class="item"><span class="nm"><span class="hash">${cm.hash}</span> ${esc(cm.msg)}</span>${mark||''}</div>`;
+    const fu=fetchedUnmerged();
+    let remoteBody;
+    if(scen==='clone'&&!S.inited) remoteBody=`<div class="empty">On GitHub. Not on your laptop yet.</div>`+S.upstream.map(cm=>commitRow(cm,'')).join('');
+    else if(!S.remoteSet) remoteBody='<div class="empty">Not connected. git remote add origin &lt;url&gt;</div>';
+    else if(!S.remote.length) remoteBody='<div class="empty">Empty repository on GitHub.</div>';
+    else remoteBody=S.remote.slice(0,6).map(cm=>commitRow(cm, inLocal(cm.hash)?'':S.fetched.has(cm.hash)?'<span class="tag m">fetched, not merged</span>':'<span class="tag u">not fetched</span>')).join('');
+    const remoteCount=scen==='clone'&&!S.inited?S.upstream.length:S.remote.length;
+    const cols=[
+      ['Working directory', S.files.length?S.files.map(fileRow).join(''):'<div class="empty">Empty folder.</div>', `${S.files.length} files`],
+      ['Staging area', staged.length?staged.map(f=>`<div class="item"><span class="nm">${esc(f)} v${S.index[f]}</span><span class="tag s">${f in S.head?'modified':'new'}</span></div>`).join(''):`<div class="empty">${S.inited?'Empty. git add puts changes here.':'No repository yet.'}</div>`, staged.length],
+      ['Local repository', !S.inited?`<div class="empty">${scen==='clone'?'No repository yet. git clone creates it.':'Run git init to create .git'}</div>`
+        :(S.local.length?S.local.slice(0,6).map(cm=>commitRow(cm, ahead.includes(cm)&&S.remoteSet?'<span class="tag m">not pushed</span>':'')).join(''):'<div class="empty">No commits yet.</div>')
+        +(fu.length?`<div class="empty" style="margin-top:6px">origin/main is ${fu.length} commit${pl(fu.length)} ahead (fetched). git merge origin/main or git pull brings ${fu.length>1?'them':'it'} in.</div>`:''), S.local.length+' commits'],
+      ['Remote · origin', remoteBody, remoteCount+' commits']
+    ];
+    board.innerHTML=cols.map((c,i)=>`<div class="col${flashCols.includes(i)?' flash':''}"><h4><span>${c[0]}</span><span>${c[2]}</span></h4>${c[1]}</div>`).join('');
+    flashCols=[];
+    $('#lcCheck').innerHTML=`<span class="eyebrow">Section 05 commands tried</span>`+TRY.map(([k,l])=>`<span class="ck${T.has(k)?' done':''}">${T.has(k)?'✓ ':''}${l}</span>`).join('')+(T.size===TRY.length?'<b style="color:var(--ok)">All seven done.</b>':'');
+    $('#lcChips').innerHTML=suggestions().map(c=>`<button class="chip" data-cmd="${esc(c)}">${esc(c)}</button>`).join('');
+  }
+  function suggestions(){
+    if(!S.inited) return scen==='clone'?[`git clone ${TEAM_URL}`,'ls']:['git init','git status'];
+    const s=['git status'];
+    const dirty=S.files.some(f=>isUntr(f)||isMod(f));
+    if(dirty) s.push('git add .');
+    if(S.files.some(isMod)) s.push('git diff');
+    if(!dirty&&!S.files.some(isStaged)) s.push('edit index.html');
+    if(S.files.some(isStaged)){ if(!S.name) s.push('git config user.name "Your Name"'); if(!S.email) s.push('git config user.email "you@example.com"'); s.push(S.local.length?'git commit -m "Update heading"':'git commit -m "First commit"'); }
+    if(S.local.length){
+      s.push('git log --oneline');
+      if(!S.remoteSet) s.push('git remote add origin https://github.com/you/my-site.git');
+      else {
+        if(aheadList().length||unfetched().length) s.push('git push origin main');
+        if(unfetched().length) s.push('git fetch','git pull origin main');
+        if(fetchedUnmerged().length) s.push('git merge origin/main');
+      }
+    }
+    if(S.local.length && S.files.some(f=>f in S.head && S.work[f]!==S.head[f])) s.push('git stash');
+    if(S.stash.length) s.push('git stash pop');
+    return [...new Set(s)];
+  }
+  board.addEventListener('click',e=>{const f=e.target.dataset&&e.target.dataset.edit; if(!f)return; editFile(f); render();});
+  $('#lcChips').addEventListener('click',e=>{const c=e.target.dataset.cmd; if(c)run(c);});
+  $('#lcForm').addEventListener('submit',e=>{e.preventDefault(); run(input.value); input.value='';});
+  $('#lcScen').addEventListener('click',e=>{const b=e.target.closest('[data-scen]'); if(b)reset(b.dataset.scen);});
+  $('#teamBtn').onclick=()=>{
+    if(!S.remoteSet||!S.remote.length){print(D(scen==='clone'?'# Clone the project first, so there is a shared repository to push to.':'# Your teammate needs a shared repository first. Commit, add a remote, and push.'));return;}
+    S.team++; const h=hx(); S.remote.unshift({hash:h,msg:`Add Priya to contributors (${S.team})`,by:'Priya',file:'CONTRIBUTORS.md',v:S.team});
+    T.add('teammate');
+    print(`<span class="y"># Developer B (Priya) pushed commit ${h} to origin/main. Your laptop does not know yet.</span>`); flash(3); render();
+  };
+  $('#lcReset').onclick=()=>reset();
+  document.querySelectorAll('[data-goscen]').forEach(a=>a.addEventListener('click',()=>reset(a.dataset.goscen)));
+  reset('init');
+})();
+
+/* ---------- 05 flow ---------- */
+(function(){
+  const cmds={
+    clone:{e:['clone'],b:['remote','wc','lr'],t:'<b>git clone &lt;url&gt;</b> copies the whole remote repository, every commit included, onto your machine. It creates your local repository and fills your working copy with the latest files. You do this once per project.'},
+    add:{e:['add'],b:['wc','st'],t:'<b>git add</b> copies changes from your working copy into the staging area. Nothing leaves your machine.'},
+    commit:{e:['commit'],b:['st','lr'],t:'<b>git commit -m "msg"</b> turns whatever is staged into a permanent snapshot in your local repository. Still nothing leaves your machine, which is why commits work offline.'},
+    push:{e:['push'],b:['lr','remote'],t:'<b>git push origin &lt;branch&gt;</b> uploads your new local commits to the remote so teammates can get them. It is refused if the remote has commits you do not have yet; pull first.'},
+    fetch:{e:['fetch'],b:['remote','lr'],t:'<b>git fetch</b> downloads new commits from the remote into your local repository (as origin/main) without touching your working copy. Safe to run any time.'},
+    pull:{e:['pull','fetch'],b:['remote','lr','wc'],t:'<b>git pull origin &lt;branch&gt;</b> is fetch plus merge: it downloads the new commits and merges them into your current branch, so your working files update.'},
+    teammate:{e:['b'],b:['remote','b'],t:'Developer B runs the same commands against the same remote. The remote is the meeting point: B pushes, you pull, and both of you end up with the same history.'}
+  };
+  const chipsEl=$('#flowChips');
+  chipsEl.innerHTML=Object.keys(cmds).map(k=>`<button class="chip" data-f="${k}">${k==='teammate'?'Developer B':'git '+k}</button>`).join('');
+  function show(k){
+    document.querySelectorAll('#flowSvg .edge, #flowSvg .elbl').forEach(el=>{el.classList.remove('on'); if(el.tagName==='path')el.setAttribute('marker-end','url(#ar)');});
+    document.querySelectorAll('#flowSvg .box').forEach(el=>el.classList.remove('on'));
+    const c=cmds[k];
+    c.e.forEach(id=>{const p=$('#e-'+id); p.classList.add('on'); p.setAttribute('marker-end','url(#ar2)'); const t=$('#t-'+id); if(t)t.classList.add('on');});
+    c.b.forEach(id=>$('#b-'+id).classList.add('on'));
+    $('#flowText').innerHTML=c.t;
+    chipsEl.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.dataset.f===k));
+  }
+  chipsEl.addEventListener('click',e=>{if(e.target.dataset.f)show(e.target.dataset.f);});
+  show('clone');
+})();
+
+/* ---------- 06 branch graph ---------- */
+(function(){
+  const colors=['var(--c-main)','var(--c-feat)','var(--c-rel)','var(--c-hot)','var(--c-dev)'];
+  const names=['feature-login','feature-cart','bugfix-header','feature-search','experiment','feature-dark-mode'];
+  let G;
+  function reset(){
+    G={commits:[{id:'a1',parents:[],lane:0,msg:'Initial commit'},{id:'b2',parents:['a1'],lane:0,msg:'Add homepage'}],
+       branches:{main:{head:'b2',lane:0}},HEAD:'main',nextLane:1,n:2,ni:0};
+    $('#gLog').innerHTML='<span class="d"># main has two commits. You are on main.</span>';
+    render();
+  }
+  const log=h=>{const el=$('#gLog');el.innerHTML+='\n'+h;el.scrollTop=el.scrollHeight;};
+  const byId=id=>G.commits.find(c=>c.id===id);
+  function ancestors(id){const s=new Set();const st=[id];while(st.length){const x=st.pop();if(s.has(x))continue;s.add(x);byId(x).parents.forEach(p=>st.push(p));}return s;}
+  const nid=()=>(G.n++).toString(36)+Math.random().toString(16).slice(2,6);
+  function commit(){
+    const b=G.branches[G.HEAD]; const id=nid(); const msg=`Work on ${G.HEAD} #${G.commits.filter(c=>c.lane===b.lane).length+1}`;
+    G.commits.push({id,parents:[b.head],lane:b.lane,msg}); b.head=id;
+    log(`<span class="p">$</span> git commit -m "${msg}"\n[${G.HEAD} ${id}] ${msg}`); render();
+  }
+  function branch(){
+    if(G.ni>=names.length){log('<span class="d"># enough branches for one diagram. Reset to start over.</span>');return;}
+    const name=names[G.ni++]; G.branches[name]={head:G.branches[G.HEAD].head,lane:G.nextLane++}; G.HEAD=name;
+    log(`<span class="p">$</span> git checkout -b ${name}\nSwitched to a new branch '${name}'`); render();
+  }
+  function checkout(name){ if(name===G.HEAD)return; G.HEAD=name; log(`<span class="p">$</span> git checkout ${name}\nSwitched to branch '${name}'`); render(); }
+  function merge(src){
+    const cur=G.branches[G.HEAD], s=G.branches[src];
+    log(`<span class="p">$</span> git merge ${src}`);
+    if(src===G.HEAD){log('<span class="d"># pick a different branch to merge into this one</span>');return;}
+    if(ancestors(cur.head).has(s.head)){log('Already up to date.');return;}
+    if(ancestors(s.head).has(cur.head)){cur.head=s.head; log(`Fast-forward\n<span class="d"># ${G.HEAD} had not moved, so its label just slid forward to ${s.head}. No new commit.</span>`); render(); return;}
+    const id=nid(); G.commits.push({id,parents:[cur.head,s.head],lane:cur.lane,msg:`Merge ${src} into ${G.HEAD}`}); cur.head=id;
+    log(`Merge made by the 'ort' strategy.\n<span class="d"># Both branches had moved, so Git created merge commit ${id} with two parents.</span>`); render();
+  }
+  function render(){
+    const dx=64, x0=40, y0=36, dy=54;
+    const pos={}; G.commits.forEach((c,i)=>pos[c.id]={x:x0+i*dx,y:y0+c.lane*dy,c});
+    const laneColor=l=>colors[l%colors.length];
+    const W=x0+G.commits.length*dx+170, H=y0+G.nextLane*dy+20;
+    let s='';
+    G.commits.forEach(c=>c.parents.forEach(p=>{const a=pos[p],b=pos[c.id];
+      const col=laneColor(c.parents.length>1&&p!==c.parents[0]?byId(p).lane:Math.max(c.lane,byId(p).lane));
+      s+= a.y===b.y?`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="3"/>`
+        :`<path d="M${a.x} ${a.y} C ${a.x+dx*.6} ${a.y}, ${b.x-dx*.6} ${b.y}, ${b.x} ${b.y}" fill="none" stroke="${col}" stroke-width="3"/>`;}));
+    G.commits.forEach(c=>{const p=pos[c.id]; s+=`<circle cx="${p.x}" cy="${p.y}" r="${c.parents.length>1?10:8}" fill="${c.parents.length>1?'var(--surface)':laneColor(c.lane)}" stroke="${laneColor(c.lane)}" stroke-width="3"><title>${c.id} · ${c.msg}</title></circle>`;});
+    const at={};
+    Object.entries(G.branches).forEach(([n,b])=>{const p=pos[b.head]; const k=b.head; at[k]=(at[k]||0)+1; const off=(at[k]-1)*18;
+      const isH=n===G.HEAD; const label=(isH?'HEAD → ':'')+n;
+      const w=label.length*7.2+14;
+      s+=`<g transform="translate(${p.x+14},${p.y-9-off})"><rect width="${w}" height="18" rx="9" fill="${isH?laneColor(b.lane):'var(--surface)'}" stroke="${laneColor(b.lane)}" stroke-width="1.5"/>
+        <text x="${w/2}" y="13" text-anchor="middle" class="mono" style="font-size:11px;font-weight:600;fill:${isH?'var(--surface)':'var(--ink)'}">${label}</text></g>`;});
+    const svg=$('#gSvg'); svg.setAttribute('width',W); svg.setAttribute('height',Math.max(H+Object.keys(G.branches).length*4,120)); svg.setAttribute('viewBox',`0 0 ${W} ${Math.max(H+Object.keys(G.branches).length*4,120)}`); svg.innerHTML=s;
+    const opts=Object.keys(G.branches).map(n=>`<option value="${n}">${n}</option>`).join('');
+    $('#gCo').innerHTML=opts; $('#gCo').value=G.HEAD;
+    const others=Object.keys(G.branches).filter(n=>n!==G.HEAD);
+    $('#gMg').innerHTML=others.length?others.map(n=>`<option value="${n}">${n}</option>`).join(''):'<option value="">(no other branch)</option>';
+    $('#gMergeGo').disabled=!others.length;
+    $('#gMergeGo').textContent=`into ${G.HEAD}`;
+  }
+  $('#gCommit').onclick=commit; $('#gBranch').onclick=branch; $('#gReset').onclick=reset;
+  $('#gCo').onchange=e=>checkout(e.target.value);
+  $('#gMergeGo').onclick=()=>{const v=$('#gMg').value; if(v)merge(v);};
+  reset();
+})();
+
+/* ---------- 07 git flow ---------- */
+(function(){
+  const L={feature:{x:60,c:'var(--c-feat)',n:'feature branches'},develop:{x:160,c:'var(--c-dev)',n:'develop'},release:{x:260,c:'var(--c-rel)',n:'release branches'},hotfix:{x:360,c:'var(--c-hot)',n:'hotfixes'},master:{x:460,c:'var(--c-main)',n:'master'}};
+  const R={
+    master:{from:'Created once, at the start of the project',into:'Never merged elsewhere; receives merges from release and hotfix branches',name:'master (or main)',life:'Permanent',why:'Every commit here is a production release, tagged with a version number such as 0.1, 0.2, 1.0.'},
+    develop:{from:'master, once at the start',into:'Feeds release branches; receives features, release fixes and hotfixes',name:'develop',life:'Permanent',why:'The integration branch. It always reflects the latest delivered work for the next release.'},
+    feature:{from:'develop',into:'develop',name:'Anything except master, develop, release-*, hotfix-*',life:'Until the feature is finished or abandoned',why:'Builds one feature for an upcoming or future release without disturbing anyone else.'},
+    release:{from:'develop',into:'develop and master',name:'release-1.0',life:'Until the release ships',why:'Freezes features for a release. Only bug fixes and release metadata go in, so develop stays open for the next release.'},
+    hotfix:{from:'master',into:'develop and master',name:'hotfix-0.2',life:'Until the fix ships',why:'Fixes a severe bug in live production straight away, without pulling in unfinished work from develop.'}
+  };
+  const commits={master:[30,150,400],hotfix:[100],develop:[60,95,165,215,260,310,350,425],feature:[130,180],release:[280,320,360]};
+  const edges=[['master',30,'develop',60],['master',30,'hotfix',100],['hotfix',100,'master',150],['hotfix',100,'develop',165],
+    ['develop',95,'feature',130],['feature',180,'develop',215],['develop',260,'release',280],['release',320,'develop',350],['release',360,'master',400],['release',360,'develop',425]];
+  const seq=[['develop',60,95],['develop',95,165],['develop',165,215],['develop',215,260],['develop',260,310],['develop',310,350],['develop',350,425],['feature',130,180],['release',280,320],['release',320,360],['master',30,150],['master',150,400]];
+  let sel='feature';
+  function draw(){
+    let s=`<defs><marker id="gfa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker></defs>`;
+    Object.entries(L).forEach(([k,l])=>{const on=k===sel;
+      s+=`<line x1="${l.x}" y1="20" x2="${l.x}" y2="445" stroke="${on?l.c:'var(--line)'}" stroke-width="${on?2:1}" stroke-dasharray="${on?'':'3 4'}"/>`;
+      s+=`<g class="gfl" data-k="${k}" style="cursor:pointer" tabindex="0" role="button" aria-label="${l.n} rules"><rect x="${l.x-46}" y="0" width="92" height="18" fill="transparent"/><text x="${l.x}" y="12" text-anchor="middle" class="mono" style="font-size:10.5px;font-weight:600;fill:${on?l.c:'var(--muted)'}">${l.n}</text></g>`;});
+    const op=k=>k===sel||sel==='all'?1:.35;
+    seq.forEach(([k,a,b])=>s+=`<line x1="${L[k].x}" y1="${a}" x2="${L[k].x}" y2="${b}" stroke="${L[k].c}" stroke-width="3" opacity="${op(k)}"/>`);
+    edges.forEach(([k1,y1,k2,y2])=>{const o=(k1===sel||k2===sel)?1:.3;
+      s+=`<line x1="${L[k1].x}" y1="${y1}" x2="${L[k2].x}" y2="${y2-2}" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#gfa)" opacity="${o}"/>`;});
+    Object.entries(commits).forEach(([k,ys])=>ys.forEach(y=>s+=`<circle cx="${L[k].x}" cy="${y}" r="8" fill="${L[k].c}" stroke="var(--surface)" stroke-width="2" opacity="${op(k)}"/>`));
+    [[30,'0.1'],[150,'0.2'],[400,'1.0']].forEach(([y,t])=>s+=`<g transform="translate(${L.master.x+14},${y-10})"><rect width="36" height="20" rx="5" fill="var(--surface)" stroke="var(--line)"/><text x="18" y="14" text-anchor="middle" class="mono" style="font-size:11px;fill:var(--ink)">${t}</text></g>`);
+    s+=`<text x="12" y="440" class="sub mono">time ↓</text>`;
+    $('#gfSvg').innerHTML=s;
+    const r=R[sel];
+    $('#gfRules').innerHTML=`<div class="chips">${Object.keys(L).map(k=>`<button class="chip${k===sel?' on':''}" data-k="${k}">${k}</button>`).join('')}</div>
+      <h3 style="font-size:22px;margin:16px 0 6px;color:${L[sel].c}">${L[sel].n}</h3><p style="margin:0">${r.why}</p>
+      <dl><dt>Branches off</dt><dd>${r.from}</dd><dt>Merges into</dt><dd>${r.into}</dd><dt>Naming</dt><dd><code>${r.name}</code></dd><dt>Lifetime</dt><dd>${r.life}</dd></dl>`;
+  }
+  function pick(e){const t=e.target.closest('[data-k]'); if(t){sel=t.dataset.k; draw();}}
+  $('#gfSvg').addEventListener('click',pick); $('#gfRules').addEventListener('click',pick);
+  $('#gfSvg').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pick(e);}});
+  draw();
+})();
+
+/* ---------- 08 commands ---------- */
+(function(){
+  const groups=[
+    ['Set up a repository',[['git init','Turn the current folder into a Git repository (creates .git)'],['git status','Show what is untracked, modified and staged'],['git add <file_name>','Stage one file for the next commit'],['git add .','Stage every change in the folder'],['git commit -m "commit message"','Save the staged snapshot to your local repository']]],
+    ['Sync with a remote repository',[['git remote add origin <git_repo_url>','Connect your repo to a remote, usually on GitHub'],['git config user.email "your_email"','Set the email recorded on your commits'],['git config user.name "your_name"','Set the name recorded on your commits'],['git push origin <branch_name>','Upload your commits on that branch to the remote'],['git pull origin <branch_name>','Download and merge the remote branch into yours'],['git clone <git_repo_url>','Copy an existing remote repository to your machine']]],
+    ['Branches',[['git branch --all','List local and remote branches'],['git checkout -b <new_branch_name>','Create a new branch and switch to it'],['git checkout <branch_name>','Switch to an existing branch'],['git fetch --all','Get every remote branch without changing your files'],['git fetch origin <branch_name>','Get one remote branch without changing your files']]],
+    ['Merging',[['git merge <branch_name>','Merge that branch into the branch you are on']]],
+    ['Useful everyday commands',[['git diff','Show unstaged line-by-line changes'],['git stash','Put uncommitted changes aside and clean the working directory'],['git stash pop','Bring the most recent stashed changes back'],['git log --oneline','Compact history, one commit per line']]]
+  ];
+  function render(q){
+    q=(q||'').toLowerCase();
+    $('#cmdList').innerHTML=groups.map(([g,cs])=>{const f=cs.filter(([c,d])=>!q||(c+' '+d+' '+g).toLowerCase().includes(q)); if(!f.length)return'';
+      return `<div class="cmdgroup"><h4>${g}</h4>${f.map(([c,d])=>`<div class="cmdrow"><div><code>${esc(c)}</code><p>${esc(d)}</p></div><button class="btn" data-copy="${esc(c)}">Copy</button></div>`).join('')}</div>`;}).join('')||'<p style="color:var(--muted)">No command matches that filter.</p>';
+  }
+  $('#cmdFilter').addEventListener('input',e=>render(e.target.value));
+  $('#cmdList').addEventListener('click',e=>{const b=e.target.closest('[data-copy]'); if(!b)return; const t=b.dataset.copy;
+    const done=()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200);};
+    try{navigator.clipboard.writeText(t).then(done,()=>{sel(b);});}catch(_){sel(b);}
+    function sel(btn){const code=btn.parentElement.querySelector('code');const r=document.createRange();r.selectNodeContents(code);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.textContent='Selected';setTimeout(()=>btn.textContent='Copy',1200);}
+  });
+  render();
+})();
+
+/* ---------- 09 quiz ---------- */
+(function(){
+  const Q=[
+    {q:'You edited three files, but only two of them belong in the next commit. What do you do?',o:['git add . then git commit','git add the two files by name, then git commit','git commit -m on its own','git stash'],a:1,e:'The staging area exists for exactly this. Stage only the files you want, and the third stays as an uncommitted change for later.'},
+    {q:'A teammate has pushed new commits. You want to see them before they touch your working files.',o:['git pull','git push','git fetch','git clone'],a:2,e:'git fetch downloads the commits into origin/main and leaves your files alone. git pull would merge them in straight away.'},
+    {q:'You are halfway through a feature with uncommitted changes, and an urgent production bug lands on your desk.',o:['Delete your changes','git stash, fix the bug, then git stash pop','Commit the half-finished work to master','git merge'],a:1,e:'git stash puts your work aside and leaves a clean working directory. After the fix, git stash pop brings your changes back.'},
+    {q:'You are on a flight with no Wi-Fi. Can you make commits with Git?',o:['No, commits need the server','Yes, commits go to your local repository','Only if you used git clone','Only on the develop branch'],a:1,e:'Git is distributed: your laptop holds the full repository. You commit offline and push when you are back online.'},
+    {q:'Which statement about Git and GitHub is true?',o:['They are two names for the same thing','GitHub is the command-line tool, Git is the website','Git is the version control tool; GitHub is a service that hosts Git repositories','You need a GitHub account to run git init'],a:2,e:'Git runs on your machine with no account. GitHub hosts repositories in the cloud and adds collaboration features like pull requests.'},
+    {q:'In the branching model, a severe bug is found in production. Which branch do you create, and from where?',o:['A feature branch from develop','A release branch from develop','A hotfix branch from master','A new commit directly on develop'],a:2,e:'Hotfix branches start from master, so they contain only production code. The fix is then merged into both master and develop.'}
+  ];
+  let i=0; const ans=Array(Q.length).fill(null);
+  function render(){
+    const it=Q[i]; $('#qTitle').textContent=`Question ${i+1} of ${Q.length}`; $('#qText').textContent=it.q;
+    const done=ans[i]!==null;
+    $('#qOpts').innerHTML=it.o.map((o,j)=>`<button class="opt${done&&j===it.a?' right':''}${done&&j===ans[i]&&j!==it.a?' wrong':''}" data-j="${j}" ${done?'disabled':''}>${esc(o)}</button>`).join('');
+    $('#qExp').innerHTML=done?`<b>${ans[i]===it.a?'Correct.':'Not quite.'}</b> ${it.e}`:'';
+    const answered=ans.filter(x=>x!==null).length, right=ans.filter((x,k)=>x===Q[k].a).length;
+    $('#qScore').textContent=`Score ${right} / ${answered}`;
+    $('#qPrev').disabled=i===0; $('#qNext').textContent=i===Q.length-1?'Start over':'Next question';
+  }
+  $('#qOpts').addEventListener('click',e=>{const b=e.target.closest('[data-j]'); if(!b||ans[i]!==null)return; ans[i]=+b.dataset.j; render();});
+  $('#qPrev').onclick=()=>{if(i>0){i--;render();}};
+  $('#qNext').onclick=()=>{if(i<Q.length-1)i++; else {i=0;ans.fill(null);} render();};
+  render();
+})();
+
+/* ---------- 11 glossary ---------- */
+(function(){
+  const G=[['Repository','A project folder plus its complete history, stored in the hidden .git folder.'],['Commit','A saved snapshot of staged changes, with an author, a date, a message and a unique hash.'],['Working directory','The files you see and edit on disk.'],['Staging area','Also called the index. The list of changes that will go into the next commit.'],['Branch','A movable label that points at a commit. New commits move it forward.'],['HEAD','A pointer to the branch, and so the commit, you currently have checked out.'],['Merge','Joining the history of one branch into another.'],['Fast-forward','A merge where the target branch had not moved, so Git just moves its label forward.'],['Merge conflict','When two branches changed the same lines differently and Git needs you to choose.'],['Remote','A copy of the repository on another machine or service, such as GitHub.'],['origin','The default name Git gives the remote you cloned from or added first.'],['Clone','Copy a remote repository, with full history, onto your machine.'],['Fetch','Download new commits from a remote without changing your files.'],['Pull','Fetch, then merge the downloaded commits into your current branch.'],['Push','Upload your local commits to a remote branch.'],['Stash','A shelf for uncommitted changes, so you can switch tasks with a clean working directory.'],['Diff','The line-by-line difference between two versions of a file.'],['Pull request','A GitHub request to merge one branch into another, with review and discussion.'],['Tag','A fixed name for a specific commit, typically a release version like 1.0.'],['CVCS / DVCS','Centralized vs distributed version control. Git is a DVCS.']];
+  function render(q){q=(q||'').toLowerCase(); const f=G.filter(([t,d])=>!q||(t+' '+d).toLowerCase().includes(q));
+    $('#gloss').innerHTML=f.map(([t,d])=>`<div><b>${t}</b>${d}</div>`).join('')||'<p style="color:var(--muted)">No term matches.</p>';}
+  $('#glFilter').addEventListener('input',e=>render(e.target.value)); render();
+})();
+</script>
+</body>
+</html>
