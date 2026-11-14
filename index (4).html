@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docker & Kubernetes Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f3ee;--paper:#fff;--paper2:#fbfaf6;--ink:#14161b;--muted:#5b616d;--line:#e2dfd5;
+  --docker:#1d63ed;--k8s:#326ce5;--teal:#0d9488;--ok:#15803d;--warn:#b45309;--err:#b91c1c;
+  --term:#0d1117;--term-ink:#d1d9e6;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+code,kbd,.mono{font-family:var(--mono);font-size:.9em}
+p code,li code,td code,.note code{background:#ecebe4;border:1px solid #dcd9ce;border-radius:5px;padding:1px 5px}
+a{color:var(--docker)}
+button{font:inherit;cursor:pointer}
+
+/* header */
+header.top{position:sticky;top:0;z-index:30;background:rgba(244,243,238,.93);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px 8px;max-width:1200px;margin:auto}
+.brand{font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .tag{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;background:var(--ink);color:#fff;border-radius:4px;padding:2px 6px;margin-right:8px}
+.pct{margin-left:auto;font:500 12px var(--mono);color:var(--muted);white-space:nowrap}
+.progress{height:3px;background:linear-gradient(90deg,var(--docker),var(--teal));width:0;transition:width .1s}
+.toc{display:flex;gap:6px;overflow-x:auto;padding:0 20px 10px;max-width:1200px;margin:auto;scrollbar-width:none}
+.toc::-webkit-scrollbar{display:none}
+.toc a{white-space:nowrap;font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--muted);text-decoration:none;background:var(--paper)}
+.toc a b{font-family:var(--mono);font-weight:500;margin-right:4px;color:#9a9ea8}
+.toc a.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc a.on b{color:#aab}
+
+main{max-width:1200px;margin:auto;padding:0 20px 60px}
+.hero{padding:56px 0 18px}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.04;letter-spacing:-.02em;margin:.25em 0 .3em}
+.hero p{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:780px;margin:0}
+.hero .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:5px 11px}
+section{padding:60px 0 6px;scroll-margin-top:96px;border-top:1px solid var(--line);margin-top:40px}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.09em;color:var(--docker);text-transform:uppercase}
+.eyebrow.k{color:var(--k8s)}
+h2{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:.35em 0 .35em;letter-spacing:-.015em}
+h3{font-size:19px;margin:0 0 .4em}
+.lede{color:var(--muted);max-width:800px;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card p:last-child{margin-bottom:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;padding:7px 13px;font-size:14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.blue{background:var(--docker);border-color:var(--docker)}
+.btn.kb{background:var(--k8s);border-color:var(--k8s)}
+.btn.warn{background:#fff7ed;color:var(--warn);border-color:#fed7aa}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.labtag{display:inline-block;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+.callout{border-left:3px solid var(--docker);background:#eef3fe;padding:12px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.callout.k{border-color:var(--k8s)}
+.callout.amber{border-color:#d97706;background:#fff7ed}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{background:var(--paper2);font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tbl tr:last-child td{border-bottom:0}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* 01 works on my machine */
+.env{font:13px/1.7 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.env .bad{color:var(--err);font-weight:600}
+.env .good{color:var(--ok);font-weight:600}
+.miniterm{background:var(--term);color:var(--term-ink);font:12.5px/1.55 var(--mono);border-radius:10px;padding:12px 14px;min-height:150px;white-space:pre-wrap;word-break:break-word}
+.miniterm .e{color:#ff7b72}.miniterm .o{color:#7ee787}.miniterm .d{color:#8b949e}.miniterm .p{color:#79c0ff}
+
+/* 02 stacks */
+.stacks{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:700px){.stacks{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:5px}
+.stack .row{display:flex;gap:5px}
+.blk{flex:1;text-align:center;border-radius:7px;padding:7px 4px;font:500 12.5px var(--mono);border:1px solid rgba(0,0,0,.06)}
+.b-app{background:#dbeafe;color:#1e3a8a}.b-lib{background:#e0f2fe;color:#075985}.b-gos{background:#fde68a;color:#78350f}
+.b-hyp{background:#fecaca;color:#7f1d1d}.b-rt{background:#bbf7d0;color:#14532d}.b-os{background:#e5e7eb;color:#1f2937}.b-hw{background:#374151;color:#f9fafb}
+.stack h3{display:flex;justify-content:space-between;align-items:baseline}
+.stack h3 span{font:500 12px var(--mono);color:var(--muted)}
+.pack{margin-top:18px}
+.pack input[type=range]{width:100%;accent-color:var(--docker)}
+.meter{margin:12px 0}
+.meter .lbl{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.bar{height:16px;background:#ecebe4;border-radius:99px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .25s}
+.bar .vm{background:#f59e0b}.bar .ct{background:var(--docker)}
+.bar.over i{background:var(--err)!important}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+@media (max-width:700px){.facts{grid-template-columns:1fr 1fr}}
+.fact{background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.fact b{display:block;font:600 20px var(--sans)}
+.fact span{font-size:12.5px;color:var(--muted)}
+
+/* 04 flow */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch;margin:18px 0 6px}
+@media (max-width:820px){.flow{grid-template-columns:1fr}}
+.station{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px;text-align:center;transition:.2s;position:relative}
+.station .where{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.station .what{font-weight:600;margin-top:4px}
+.station .ico{font-size:24px}
+.station.hi{border-color:var(--docker);background:#eef3fe;box-shadow:0 0 0 3px rgba(29,99,237,.12)}
+.station.src{border-color:#d97706;background:#fff7ed}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.cchip{font:500 13px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px 10px}
+.cchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.explain{min-height:72px}
+
+/* LAB */
+.lab{border:1px solid var(--line);border-radius:16px;background:var(--paper);overflow:hidden;margin-top:24px;box-shadow:0 1px 0 rgba(0,0,0,.02),0 10px 30px -18px rgba(0,0,0,.18)}
+.lab-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--paper2)}
+.lab-title{font:600 13px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--teal)}
+.scen-desc{font-size:14px;color:var(--muted);margin-top:2px;max-width:640px}
+.lab-actions{display:flex;align-items:center;gap:10px}
+.step-prog{font:500 12px var(--mono);color:var(--muted)}
+.scen-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.scen-tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;padding:12px 16px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab span{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;display:block;color:#9a9ea8}
+.tab.on{color:var(--ink);border-bottom-color:var(--docker);font-weight:600}
+.tab.on span{color:var(--docker)}
+.lab.kube .tab.on{border-bottom-color:var(--k8s)}
+.lab-grid{display:grid;grid-template-columns:330px 1fr;min-height:540px}
+@media (max-width:900px){.lab-grid{grid-template-columns:1fr}}
+.guide{border-right:1px solid var(--line);padding:14px 14px 18px;background:#fdfdfb;max-height:860px;overflow:auto}
+@media (max-width:900px){.guide{border-right:0;border-bottom:1px solid var(--line);max-height:none}}
+.guide summary{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);cursor:pointer;margin:4px 0 8px}
+.guide ol{margin:0;padding:0;list-style:none;counter-reset:s}
+.guide ol li{counter-increment:s;position:relative;padding:7px 0 9px 30px;border-bottom:1px dashed #ebe9e1}
+.guide ol li::before{content:counter(s);position:absolute;left:0;top:8px;width:21px;height:21px;border-radius:50%;background:#efede6;color:var(--muted);font:600 11px/21px var(--mono);text-align:center}
+.guide ol li.done::before{content:'✓';background:var(--ok);color:#fff}
+.guide ol li.next::before{background:var(--docker);color:#fff}
+.lab.kube .guide ol li.next::before{background:var(--k8s)}
+.guide ol li.done .cmdchip{opacity:.6}
+.cmdchip{display:inline-block;text-align:left;font:500 12.5px/1.45 var(--mono);background:#f1f0ea;border:1px solid #dedbd0;border-radius:6px;padding:3px 7px;color:var(--ink);word-break:break-all}
+.cmdchip:hover{border-color:var(--ink);background:#fff}
+li.next .cmdchip{background:#eef3fe;border-color:#bfd2fb}
+.guide .note{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.guide ul{margin:0;padding:0;list-style:none}
+.guide ul li{padding:6px 0 8px;border-bottom:1px dashed #ebe9e1}
+.guide ul li .cmdchip{background:#fff7ed;border-color:#fed7aa}
+.work{padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+
+.term{background:var(--term);color:var(--term-ink);border-radius:12px;font:13px/1.55 var(--mono);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.t-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#161b22;border-bottom:1px solid #21262d}
+.t-bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block}
+.t-bar i:nth-child(2){background:#febc2e}.t-bar i:nth-child(3){background:#28c840}
+.t-name{margin-left:8px;color:#8b949e;font-size:12px}
+.t-body{height:400px;overflow:auto;padding:12px 14px;cursor:text;-webkit-overflow-scrolling:touch}
+@media (max-width:600px){.t-body{height:340px;font-size:12px}}
+.ln{white-space:pre;min-height:1.55em}
+.ln.err{color:#ff7b72}.ln.ok{color:#7ee787}.ln.dim{color:#8b949e;white-space:pre-wrap}.ln.hl{color:#e3b341}
+.ln.cmd{color:#fff;margin-top:4px;white-space:pre-wrap;word-break:break-all}
+.ln.cmd .p,.t-prompt{color:#79c0ff}
+.t-line{display:flex;align-items:center;gap:6px;margin-top:4px}
+.t-prompt{white-space:pre}
+.t-in{flex:1;min-width:40px;background:transparent;border:0;color:#fff;font:inherit;outline:none;caret-color:#7ee787;padding:0}
+@media (max-width:600px){.t-in{font-size:16px}}
+.suggest>span{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper2);border-radius:7px;padding:5px 9px;color:var(--ink);text-align:left;word-break:break-all}
+.chips button:first-child{border-color:#9db8f6;background:#eef3fe}
+.chips button:hover{border-color:var(--ink)}
+.extra:empty{display:none}
+
+/* docker viz */
+.viz{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper2)}
+.viz h4{margin:0 0 8px;font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dviz{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+@media (max-width:700px){.dviz{grid-template-columns:1fr}}
+.vbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}
+.vbox.reg{border-style:dashed}
+.vh{font:600 12.5px var(--sans);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.vh small{font:500 11px var(--mono);color:var(--muted)}
+.vsec{margin-top:8px}
+.vsec>b{display:block;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:#8a8f99;margin-bottom:4px}
+.vchips{display:flex;flex-wrap:wrap;gap:5px}
+.vc{font:500 11.5px/1.35 var(--mono);border-radius:6px;padding:3px 7px;border:1px solid var(--line);background:var(--paper2)}
+.vc.img{background:#eef3fe;border-color:#c9d8fb;color:#1e3a8a}
+.vc.run{background:#ecfdf3;border-color:#a7e3bf;color:#14532d}
+.vc.run::before{content:'● ';color:#16a34a}
+.vc.stop{background:#f3f4f6;color:#6b7280}
+.vc.stop::before{content:'○ '}
+.vc.vol{background:#fdf4ff;border-color:#f0c6f7;color:#701a75}
+.vc.net{background:#f0fdfa;border-color:#a7ece0;color:#115e59}
+.vc .sub{display:block;font-size:10.5px;opacity:.8}
+.empty{font-size:12px;color:#9a9ea8;font-style:italic}
+
+/* k8s viz */
+.kviz .cp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1.5px solid #c9d6f7;background:#f3f6fe;border-radius:10px;padding:8px 10px;margin-bottom:10px}
+.kviz .cp b{font:600 12px var(--sans);margin-right:4px}
+.kviz .cp span{font:500 11px var(--mono);background:#fff;border:1px solid #c9d6f7;border-radius:5px;padding:2px 6px;color:#1e40af}
+.nodes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:700px){.nodes{grid-template-columns:1fr}}
+.node{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:8px;min-height:92px;transition:.3s}
+.node .nh{display:flex;justify-content:space-between;align-items:center;gap:6px;font:600 12px var(--mono);margin-bottom:6px}
+.node .st{font:600 10px var(--mono);padding:1px 6px;border-radius:99px;background:#dcfce7;color:#166534;white-space:nowrap}
+.node.down{background:repeating-linear-gradient(135deg,#fef2f2,#fef2f2 8px,#fff 8px,#fff 16px);border-color:#fca5a5}
+.node.down .st{background:#fee2e2;color:#991b1b}
+.node.cord{border-style:dashed;border-color:#f59e0b}
+.node.cord .st{background:#fef3c7;color:#92400e}
+.pods{display:flex;flex-wrap:wrap;gap:5px}
+.pod{font:500 10.5px/1.3 var(--mono);border-radius:7px;padding:4px 6px;color:#fff;min-width:64px;position:relative;transition:.3s}
+.pod small{display:block;opacity:.85;font-size:9.5px}
+.pod.ContainerCreating,.pod.Pending{opacity:.55;animation:pulse 1s infinite alternate}
+.pod.Terminating{opacity:.3;text-decoration:line-through}
+.pod.ErrImagePull,.pod.ImagePullBackOff{background:#fff!important;color:var(--err);border:1.5px dashed var(--err)}
+@keyframes pulse{from{opacity:.35}to{opacity:.8}}
+.krow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font:500 11.5px var(--mono)}
+.krow .k{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:3px 7px}
+.krow .k b{color:var(--k8s)}
+.pending-pods{margin-top:8px}
+.kbtns{display:flex;flex-wrap:wrap;gap:6px}
+.kbtns .btn{font-size:13px;padding:5px 10px}
+
+/* layers lab */
+.layers{font:13px/1.5 var(--mono);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+.layer{display:grid;grid-template-columns:1fr 120px;gap:8px;padding:8px 12px;border-bottom:1px solid #eeece5;align-items:center}
+.layer:last-child{border-bottom:0}
+.layer code{background:none;border:0;padding:0;word-break:break-all}
+.layer .res{text-align:right;font-size:12px;font-weight:600}
+.layer.cached .res{color:var(--ok)}
+.layer.built .res{color:var(--warn)}
+.layer.built{background:#fffaf0}
+.layer.meta{color:#8a8f99}
+.buildlog{font:12.5px/1.6 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:160px;overflow:auto;margin-top:10px}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.toggle button{border:0;background:var(--paper);padding:7px 12px;font-size:13.5px}
+.toggle button.on{background:var(--ink);color:#fff}
+
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr;gap:12px}
+.cpbox{border:2px solid #c9d6f7;background:#f3f6fe;border-radius:14px;padding:12px}
+.cpbox>.t,.wbox>.t{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:#1e40af;margin-bottom:8px}
+.comps{display:flex;flex-wrap:wrap;gap:8px}
+.comp{border:1.5px solid #c9d6f7;background:#fff;border-radius:10px;padding:8px 12px;font:600 13px var(--mono);color:#1e3a8a;transition:.2s}
+.comp:hover{border-color:var(--k8s)}
+.comp.hi{background:var(--k8s);color:#fff;border-color:var(--k8s);box-shadow:0 0 0 4px rgba(50,108,229,.18)}
+.wnodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){.wnodes{grid-template-columns:1fr}}
+.wbox{border:2px solid var(--line);border-radius:14px;padding:12px;background:var(--paper)}
+.wbox>.t{color:var(--muted)}
+.wbox .comp{border-color:var(--line);color:var(--ink)}
+.wbox .comp.hi{background:var(--k8s);color:#fff}
+.podmini{display:inline-block;font:500 11px var(--mono);background:#e0e7ff;color:#3730a3;border-radius:6px;padding:3px 7px;margin:2px}
+.kctl{display:flex;align-items:center;gap:8px}
+.archinfo{min-height:120px}
+.tracebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.dots{display:flex;gap:5px}
+.dots i{width:8px;height:8px;border-radius:50%;background:#d8d5cb;display:inline-block}
+.dots i.on{background:var(--k8s)}
+
+/* reference */
+.refbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0}
+.refbar input{flex:1;min-width:220px;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 14px;font:15px var(--sans)}
+.refbar input:focus{outline:2px solid var(--docker);border-color:transparent}
+.fchip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:13px}
+.fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ref td:first-child{white-space:nowrap}
+.ref td:first-child code{background:none;border:0;padding:0;font-size:13px;color:#1e3a8a}
+.ref .cat{font:500 11px var(--mono);text-transform:uppercase;color:var(--muted)}
+@media (max-width:700px){.ref td:first-child{white-space:normal}.ref .cathead{display:none}.ref td.catcell{display:none}}
+
+/* quiz */
+.quiz{max-width:820px}
+.qhead{display:flex;justify-content:space-between;font:500 13px var(--mono);color:var(--muted);margin-bottom:10px}
+.qtext{font-size:19px;font-weight:600;margin-bottom:14px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 14px;font:500 14.5px var(--mono)}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#ecfdf3}
+.opt.wrong{border-color:var(--err);background:#fef2f2}
+.opt:disabled{cursor:default}
+.qexp{margin-top:12px;font-size:15px;min-height:24px}
+.qnav{display:flex;justify-content:space-between;margin-top:16px}
+
+/* activities */
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.acts{grid-template-columns:1fr}}
+.act{position:relative}
+.act .num{font:600 12px var(--mono);color:var(--teal)}
+.act h3{margin-top:4px}
+.act ol{padding-left:20px;margin:8px 0 0;font-size:15px}
+.act label{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted);margin-top:12px;cursor:pointer}
+.act.done{border-color:#a7e3bf;background:#f6fdf9}
+
+.takeaways{counter-reset:t;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:820px){.takeaways{grid-template-columns:1fr}}
+.takeaways li{counter-increment:t;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 52px;position:relative}
+.takeaways li::before{content:counter(t,decimal-leading-zero);position:absolute;left:16px;top:14px;font:600 14px var(--mono);color:var(--docker)}
+dl.gloss{display:grid;grid-template-columns:200px 1fr;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+dl.gloss dt,dl.gloss dd{margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+dl.gloss dt{font:600 14px var(--mono);background:var(--paper2)}
+@media (max-width:640px){dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:2px}}
+footer{border-top:1px solid var(--line);padding:30px 20px 50px;text-align:center;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="topbar">
+    <div class="brand"><span class="tag">Playground</span>MLOps · Virtualisation &amp; Containerization</div>
+    <div class="pct"><span id="pct">0%</span> · Contents</div>
+  </div>
+  <nav class="toc" id="toc">
+    <a href="#s1"><b>01</b>The problem</a>
+    <a href="#s2"><b>02</b>VMs vs containers</a>
+    <a href="#s3"><b>03</b>Docker ≠ Kubernetes</a>
+    <a href="#s4"><b>04</b>Build, ship, run</a>
+    <a href="#s5"><b>05</b>Docker lab</a>
+    <a href="#s6"><b>06</b>Layers &amp; cache</a>
+    <a href="#s7"><b>07</b>K8s architecture</a>
+    <a href="#s8"><b>08</b>Kubernetes lab</a>
+    <a href="#s9"><b>09</b>Command reference</a>
+    <a href="#s10"><b>10</b>Which command?</a>
+    <a href="#s11"><b>11</b>Activities</a>
+    <a href="#s12"><b>12</b>Takeaways</a>
+  </nav>
+  <div class="progress" id="bar"></div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">Session · Virtualisation &amp; Containerization</div>
+  <h1>Docker &amp; Kubernetes, hands-on</h1>
+  <p>Package a model once, run it anywhere, then let a cluster keep it alive. Every lab on this page runs a simulated Docker engine or Kubernetes cluster in your browser. Type real commands, break things on purpose, and watch what happens.</p>
+  <div class="pills"><span class="pill">2 live terminals</span><span class="pill">6 guided scenarios</span><span class="pill">70+ commands</span><span class="pill">nothing to install</span></div>
+</div>
+
+<!-- 01 -->
+<section id="s1">
+  <div class="eyebrow">01 · Why this exists</div>
+  <h2>The problem it solves: “it works on my machine”</h2>
+  <p class="lede">A trained model is more than a <code>.pkl</code> file. It depends on a Python version, library versions, system libraries and environment variables. Ship only the code and the server has to recreate all of that by hand, and it usually gets something slightly wrong.</p>
+  <div class="card" style="margin-top:20px">
+    <div class="labtag">Lab · ship it to the server</div>
+    <div class="grid2">
+      <div>
+        <h3>💻 Your laptop</h3>
+        <div class="env">python 3.11.10<br>scikit-learn 1.5.2<br>joblib 1.4.2<br>fastapi 0.115.0<br>libgomp1 installed</div>
+      </div>
+      <div>
+        <h3>🖥️ Production server</h3>
+        <div class="env" id="srvEnv">python 3.8.10<br>scikit-learn 0.24.2<br>joblib — <span class="bad">missing</span><br>fastapi — <span class="bad">missing</span><br>libgomp1 — <span class="bad">missing</span></div>
+      </div>
+    </div>
+    <div class="btnrow" style="margin:6px 0 12px">
+      <button class="btn ghost" id="shipCode">Ship just the code</button>
+      <button class="btn blue" id="shipImg">Ship a container image</button>
+    </div>
+    <div class="miniterm" id="shipOut"><span class="d">Pick a way to deploy iris-api to the server…</span></div>
+  </div>
+  <div class="callout">A <b>container image</b> bundles the app <i>and</i> its whole user-space environment into one versioned artifact. The server only needs a container runtime. Same image, same behaviour, on a laptop, a CI runner or a 100-node cluster.</div>
+</section>
+
+<!-- 02 -->
+<section id="s2">
+  <div class="eyebrow">02 · Virtualisation</div>
+  <h2>Virtual machines vs containers</h2>
+  <p class="lede">Both isolate workloads, at different levels. A <b>VM</b> virtualises <i>hardware</i>: a hypervisor runs a full guest OS, with its own kernel, for each app. A <b>container</b> virtualises the <i>operating system</i>: apps share the host's Linux kernel and are fenced off with kernel features (<b>namespaces</b> control what a process can see, <b>cgroups</b> control how much CPU and memory it may use).</p>
+  <div class="stacks" style="margin-top:20px">
+    <div class="card stack">
+      <h3>Virtual machines <span>hardware-level</span></h3>
+      <div class="row"><div class="blk b-app">App A</div><div class="blk b-app">App B</div><div class="blk b-app">App C</div></div>
+      <div class="row"><div class="blk b-lib">Bins/Libs</div><div class="blk b-lib">Bins/Libs</div><div class="blk b-lib">Bins/Libs</div></div>
+      <div class="row"><div class="blk b-gos">Guest OS</div><div class="blk b-gos">Guest OS</div><div class="blk b-gos">Guest OS</div></div>
+      <div class="blk b-hyp">Hypervisor (KVM, ESXi, Hyper-V)</div>
+      <div class="blk b-os">Host OS (or bare-metal hypervisor)</div>
+      <div class="blk b-hw">Hardware</div>
+    </div>
+    <div class="card stack">
+      <h3>Containers <span>OS-level</span></h3>
+      <div class="row"><div class="blk b-app">App A</div><div class="blk b-app">App B</div><div class="blk b-app">App C</div></div>
+      <div class="row"><div class="blk b-lib">Bins/Libs</div><div class="blk b-lib">Bins/Libs</div><div class="blk b-lib">Bins/Libs</div></div>
+      <div class="blk b-rt">Container runtime (Docker Engine / containerd)</div>
+      <div class="blk b-os">Host OS: one shared Linux kernel</div>
+      <div class="blk b-hw">Hardware</div>
+    </div>
+  </div>
+
+  <div class="card pack">
+    <div class="labtag">Lab · pack the server</div>
+    <p class="small muted" style="margin-top:0">One server: <b>64 GB RAM</b>. Each model API needs ~0.5 GB. A VM adds ~2 GB for its guest OS; a container adds ~30 MB. The numbers are illustrative but the proportions hold.</p>
+    <label class="small" for="apps"><b id="appsN">8</b> model APIs to host</label>
+    <input type="range" id="apps" min="1" max="60" value="8">
+    <div class="meter"><div class="lbl"><span>VMs: memory used</span><span id="vmTxt"></span></div><div class="bar" id="vmBar"><i class="vm"></i></div></div>
+    <div class="meter"><div class="lbl"><span>Containers: memory used</span><span id="ctTxt"></span></div><div class="bar" id="ctBar"><i class="ct"></i></div></div>
+    <div class="facts">
+      <div class="fact"><b id="fVm">25</b><span>max VMs on this box</span></div>
+      <div class="fact"><b id="fCt">120</b><span>max containers on this box</span></div>
+      <div class="fact"><b>~30–60 s</b><span>VM boot (full OS)</span></div>
+      <div class="fact"><b>&lt; 1 s</b><span>container start (just a process)</span></div>
+    </div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Choose VMs when…</h3><p class="small">you need a different kernel or OS (Windows on Linux hardware), hard multi-tenant security boundaries, or you're running legacy systems. Cloud instances are themselves VMs.</p></div>
+    <div class="card"><h3>Choose containers when…</h3><p class="small">you want fast, dense, reproducible deployments of Linux services, such as model APIs, batch jobs or pipelines. In practice you usually run <i>containers inside VMs</i>.</p></div>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s3">
+  <div class="eyebrow">03 · Two tools, two jobs</div>
+  <h2>Docker is not Kubernetes</h2>
+  <p class="lede">Docker <b>builds and runs</b> containers on one machine. Kubernetes <b>orchestrates</b> containers across many machines: it decides where they run, restarts them when they die, scales them and routes traffic to them. They complement each other.</p>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th></th><th>Docker</th><th>Kubernetes</th></tr>
+    <tr><td><b>Scope</b></td><td>One host</td><td>A cluster of nodes</td></tr>
+    <tr><td><b>Unit you manage</b></td><td>Image, container</td><td>Pod, Deployment, Service</td></tr>
+    <tr><td><b>Main job</b></td><td>Package an app into an image and run it</td><td>Keep the <i>desired state</i> true: N healthy copies, reachable, up to date</td></tr>
+    <tr><td><b>How you talk to it</b></td><td><code>docker build</code>, <code>docker run</code></td><td><code>kubectl apply -f</code>, <code>kubectl get</code></td></tr>
+    <tr><td><b>Multi-container apps</b></td><td>Docker Compose (one host)</td><td>Deployments + Services (many hosts)</td></tr>
+    <tr><td><b>If a container crashes</b></td><td>Stays dead unless you set a restart policy</td><td>Controller notices and replaces it automatically</td></tr>
+    <tr><td><b>Analogy</b></td><td>The shipping container and the crane that loads one</td><td>The port authority that schedules thousands of them</td></tr>
+  </table>
+  </div>
+  <div class="grid3" style="margin-top:18px">
+    <div class="card"><h3>Image vs container</h3><p class="small">An <b>image</b> is a read-only, layered template (think: class / recipe). A <b>container</b> is a running instance of it with a thin writable layer on top (think: object / the dish). One image → many containers.</p></div>
+    <div class="card"><h3>Kubernetes doesn't need Docker Engine</h3><p class="small">Kubernetes runs containers through a CRI runtime such as <b>containerd</b> or <b>CRI-O</b>; built-in Docker Engine support (dockershim) was removed in v1.24. Images you build with Docker still run unchanged, because both follow the <b>OCI</b> image standard.</p></div>
+    <div class="card"><h3>Where the image lives</h3><p class="small">A <b>registry</b> stores and serves images: Docker Hub, GitHub Container Registry, AWS ECR, Google Artifact Registry, Azure ACR. Kubernetes nodes <i>pull</i> from it, so a cluster can only run images it can reach.</p></div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s4">
+  <div class="eyebrow">04 · The container lifecycle</div>
+  <h2>Build, ship, run</h2>
+  <p class="lede">Where does each command move things? Tap a command to trace it.</p>
+  <div class="flow" id="flow">
+    <div class="station" data-s="0"><div class="where">Laptop</div><div class="ico">📄</div><div class="what">Dockerfile + code</div></div>
+    <div class="station" data-s="1"><div class="where">Laptop</div><div class="ico">📦</div><div class="what">Image</div></div>
+    <div class="station" data-s="2"><div class="where">Registry</div><div class="ico">🏬</div><div class="what">Docker Hub / ECR / GAR</div></div>
+    <div class="station" data-s="3"><div class="where">Server / node</div><div class="ico">📦</div><div class="what">Image (local copy)</div></div>
+    <div class="station" data-s="4"><div class="where">Server / node</div><div class="ico">▶️</div><div class="what">Running container(s)</div></div>
+  </div>
+  <div class="chiprow" id="flowChips"></div>
+  <div class="card explain" id="flowExp"><span class="muted">Pick a command above.</span></div>
+</section>
+
+<!-- 05 -->
+<section id="s5">
+  <div class="eyebrow">05 · Hands-on</div>
+  <h2>Lab: the Docker terminal</h2>
+  <p class="lede">A simulated Docker Engine with its own images, containers, volumes, networks and a pretend Docker Hub. Follow a scenario step by step, or type anything; <code>help</code> lists what's supported. The panel under the terminal shows the engine's state live.</p>
+  <div id="dockerLab"></div>
+</section>
+
+<!-- 06 -->
+<section id="s6">
+  <div class="eyebrow">06 · Images under the hood</div>
+  <h2>Dockerfile layers &amp; the build cache</h2>
+  <p class="lede">Each instruction in a Dockerfile makes a <b>layer</b>. Docker reuses (caches) a layer if that instruction <i>and everything above it</i> is unchanged. Once one layer changes, every layer below it is rebuilt. Order matters: put the slow, rarely changing steps first.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="labtag">Lab · make the build fast</div>
+    <div class="btnrow" style="align-items:center;margin-bottom:12px">
+      <div class="toggle" id="ordTog"><button data-o="good" class="on">Good order</button><button data-o="bad">Bad order</button></div>
+      <span class="small muted">Dockerfile instruction order</span>
+    </div>
+    <div class="layers" id="layers"></div>
+    <div class="btnrow" style="margin-top:12px">
+      <button class="btn blue" id="lBuild">▶ docker build</button>
+      <button class="btn ghost" id="lCode">✏️ Edit app.py</button>
+      <button class="btn ghost" id="lReq">➕ Add a package to requirements.txt</button>
+      <button class="btn ghost" id="lBase">⬆️ Bump base to python:3.12-slim</button>
+      <button class="btn ghost" id="lReset">↺ Clear cache</button>
+    </div>
+    <div class="buildlog" id="blog"><span class="muted">Build history appears here. Build once, edit app.py, then build again in each order and compare the times.</span></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Image hygiene for ML</h3><p class="small">Use slim base images (<code>python:3.11-slim</code>); add a <code>.dockerignore</code> so datasets, <code>.git</code> and notebooks don't enter the build context; pin package versions; use <b>multi-stage builds</b> to keep compilers out of the final image; never bake secrets into layers.</p></div>
+    <div class="card"><h3>Models in or out of the image?</h3><p class="small">Small models can be <code>COPY</code>'d in, giving one immutable artifact per model version. Large models are often pulled at start-up from object storage or a model registry, or mounted as a volume, to keep images small.</p></div>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s7">
+  <div class="eyebrow k">07 · Orchestration</div>
+  <h2>Kubernetes architecture</h2>
+  <p class="lede">A cluster is a <b>control plane</b> (the brain) plus <b>worker nodes</b> (the muscle). You never tell Kubernetes <i>how</i> to do things; you declare <i>what</i> you want, and controllers keep working until reality matches. Tap a component, or trace what happens after <code>kubectl apply</code>.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="tracebar">
+      <button class="btn kb" id="trNext">▶ Trace: kubectl apply -f deployment.yaml</button>
+      <button class="btn ghost" id="trReset">Reset</button>
+      <div class="dots" id="trDots"></div>
+    </div>
+    <div class="arch">
+      <div class="kctl"><button class="comp" data-c="kubectl">💻 kubectl (you)</button><span class="muted small">→ HTTPS → API server</span></div>
+      <div class="cpbox"><div class="t">Control plane</div>
+        <div class="comps">
+          <button class="comp" data-c="api">kube-apiserver</button>
+          <button class="comp" data-c="etcd">etcd</button>
+          <button class="comp" data-c="sched">kube-scheduler</button>
+          <button class="comp" data-c="cm">controller-manager</button>
+        </div>
+      </div>
+      <div class="wnodes">
+        <div class="wbox"><div class="t">Worker node 1</div><div class="comps"><button class="comp" data-c="kubelet">kubelet</button><button class="comp" data-c="proxy">kube-proxy</button><button class="comp" data-c="cri">containerd</button></div><div style="margin-top:8px" class="np" data-n="1"><span class="podmini">pod</span></div></div>
+        <div class="wbox"><div class="t">Worker node 2</div><div class="comps"><button class="comp" data-c="kubelet">kubelet</button><button class="comp" data-c="proxy">kube-proxy</button><button class="comp" data-c="cri">containerd</button></div><div style="margin-top:8px" class="np" data-n="2"><span class="podmini">pod</span><span class="podmini">pod</span></div></div>
+        <div class="wbox"><div class="t">Worker node 3</div><div class="comps"><button class="comp" data-c="kubelet">kubelet</button><button class="comp" data-c="proxy">kube-proxy</button><button class="comp" data-c="cri">containerd</button></div><div style="margin-top:8px" class="np" data-n="3"><span class="podmini">pod</span></div></div>
+      </div>
+    </div>
+    <div class="card archinfo" id="archInfo" style="margin-top:12px;background:var(--paper2)"><span class="muted">Tap any component to see what it does.</span></div>
+  </div>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th>Object</th><th>What it is</th><th>ML example</th></tr>
+    <tr><td><b>Pod</b></td><td>Smallest deployable unit: one or more containers sharing an IP and volumes. Disposable.</td><td>One replica of <code>iris-api</code></td></tr>
+    <tr><td><b>ReplicaSet</b></td><td>Keeps N identical pods running. You rarely touch it directly.</td><td>"Always 3 copies of v1.1"</td></tr>
+    <tr><td><b>Deployment</b></td><td>Manages ReplicaSets to give rolling updates and rollbacks.</td><td>Ship model v1.2 with zero downtime</td></tr>
+    <tr><td><b>Service</b></td><td>Stable virtual IP / DNS name that load-balances across matching pods.</td><td><code>model-api-svc</code> in front of all replicas</td></tr>
+    <tr><td><b>ConfigMap / Secret</b></td><td>Config and credentials injected as env vars or files.</td><td>Model path, feature flags, S3 keys</td></tr>
+    <tr><td><b>Job / CronJob</b></td><td>Run-to-completion work, optionally on a schedule.</td><td>Nightly retraining, batch scoring</td></tr>
+    <tr><td><b>HPA</b></td><td>Horizontal Pod Autoscaler: scales replicas on CPU or custom metrics.</td><td>Scale inference from 2→10 pods at peak</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s8">
+  <div class="eyebrow k">08 · Hands-on</div>
+  <h2>Lab: the Kubernetes terminal</h2>
+  <p class="lede">A simulated 3-node <b>minikube</b> cluster. Pods take a moment to pull images and start, controllers reconcile every few hundred milliseconds, and nodes can fail. Watch the cluster panel as you type. Timings are compressed; real clusters wait longer before giving up.</p>
+  <div id="kubeLab"></div>
+</section>
+
+<!-- 09 -->
+<section id="s9">
+  <div class="eyebrow">09 · Cheat sheet</div>
+  <h2>Command reference</h2>
+  <p class="lede">Search by name or by what you're trying to do, for example “logs”, “scale” or “delete”.</p>
+  <div class="refbar">
+    <input id="refQ" type="search" placeholder="Search commands or purpose…" aria-label="Search commands">
+    <div class="btnrow" id="refCats"></div>
+  </div>
+  <div class="scrollx"><table class="tbl ref" id="refTbl"></table></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <div class="eyebrow">10 · Check yourself</div>
+  <h2>Which command?</h2>
+  <div class="card quiz" id="quiz" style="margin-top:18px"></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <div class="eyebrow">11 · Practice</div>
+  <h2>Activities</h2>
+  <p class="lede">Do these in the labs above (or on a real machine with Docker Desktop and minikube). Tick each off as you go.</p>
+  <div class="acts" id="acts" style="margin-top:18px"></div>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <div class="eyebrow">12 · Wrap-up</div>
+  <h2>Key takeaways</h2>
+  <ol class="takeaways">
+    <li><b>Containers package the environment, not just the code.</b> That is what makes ML deployments reproducible across laptop, CI and production.</li>
+    <li><b>VMs virtualise hardware; containers virtualise the OS.</b> Containers share the host kernel, so they are smaller and start in milliseconds, with weaker isolation than a VM.</li>
+    <li><b>Image = template, container = running instance.</b> Images are immutable and versioned by tag; containers are disposable.</li>
+    <li><b>Order your Dockerfile for the cache.</b> Dependencies first, code last, so a code change rebuilds in seconds.</li>
+    <li><b>Containers are ephemeral; state lives in volumes</b> (Docker) or PersistentVolumes (Kubernetes), or in an external store.</li>
+    <li><b>Kubernetes is declarative.</b> You state the desired state; controllers reconcile constantly, which is why deleted pods come back.</li>
+    <li><b>Deployments give you rolling updates and instant rollback.</b> A bad model image stalls the rollout instead of taking the service down.</li>
+    <li><b>Services give pods a stable address.</b> Pods come and go with new IPs; clients talk to the Service.</li>
+  </ol>
+  <h3 style="margin-top:34px">Glossary</h3>
+  <dl class="gloss">
+    <dt>Hypervisor</dt><dd>Software that runs virtual machines by virtualising hardware (KVM, ESXi, Hyper-V).</dd>
+    <dt>Namespaces</dt><dd>Linux kernel feature that limits what a process can see (its own PIDs, network, mounts, hostname).</dd>
+    <dt>cgroups</dt><dd>Linux kernel feature that limits what a process can use (CPU, memory, I/O).</dd>
+    <dt>Image</dt><dd>Read-only stack of filesystem layers plus metadata (entrypoint, env, ports).</dd>
+    <dt>Layer</dt><dd>The filesystem diff produced by one Dockerfile instruction; cached and shared between images.</dd>
+    <dt>Container</dt><dd>A running (or stopped) instance of an image with its own writable layer.</dd>
+    <dt>Registry</dt><dd>Server that stores and distributes images (Docker Hub, ECR, GAR, GHCR).</dd>
+    <dt>Tag</dt><dd>Human-readable label for an image version, such as <code>iris-api:1.1</code>. <code>latest</code> is just the default tag, not "newest".</dd>
+    <dt>Volume</dt><dd>Storage managed by Docker that outlives any single container.</dd>
+    <dt>Docker Compose</dt><dd>YAML file plus CLI to run a multi-container app on one host.</dd>
+    <dt>Node</dt><dd>A machine (VM or physical) in a Kubernetes cluster that runs pods.</dd>
+    <dt>Pod</dt><dd>One or more containers scheduled together, sharing network and storage.</dd>
+    <dt>Deployment</dt><dd>Declares desired replicas and pod template; manages rollouts via ReplicaSets.</dd>
+    <dt>Service</dt><dd>Stable network endpoint load-balancing to pods selected by labels (ClusterIP, NodePort, LoadBalancer).</dd>
+    <dt>kubelet</dt><dd>Agent on every node that makes sure the pods assigned to it are running.</dd>
+    <dt>etcd</dt><dd>Consistent key-value store holding the entire cluster state.</dd>
+    <dt>Reconciliation</dt><dd>The control loop: observe actual state, compare to desired, act to close the gap.</dd>
+  </dl>
+</section>
+</main>
+
+<footer>The labs on this page simulate Docker and Kubernetes in your browser for teaching. Output is simplified, nothing is installed, and nothing is sent anywhere.<br>Real commands behave the same way in spirit; try them on Docker Desktop + minikube.</footer>
+
+<script>
+/* ============ utilities ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const rnd=(chars,n)=>Array.from({length:n},()=>chars[Math.random()*chars.length|0]).join('');
+const hex=n=>rnd('0123456789abcdef',n);
+const kid=n=>rnd('bcdfghjklmnpqrstvwxz2456789',n);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function table(rows,gap=3){const w=[];rows.forEach(r=>r.forEach((c,i)=>w[i]=Math.max(w[i]||0,String(c).length)));return rows.map(r=>r.map((c,i)=>i===r.length-1?String(c):String(c).padEnd(w[i]+gap)).join('')).join('\n')}
+function tokenize(s){const out=[];const re=/"([^"]*)"|'([^']*)'|(\S+)/g;let m;while((m=re.exec(s)))out.push(m[1]!==undefined?m[1]:m[2]!==undefined?m[2]:m[3]);return out}
+function ago(t){const s=Math.max(1,Math.round((Date.now()-t)/1000));if(s<60)return s+' seconds';const m=Math.round(s/60);return m===1?'About a minute':m+' minutes'}
+function kage(t){const s=Math.max(0,Math.round((Date.now()-t)/1000));if(s<120)return s+'s';return Math.round(s/60)+'m'}
+function nginxTime(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+function clfTime(){const d=new Date();const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];const p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${mo}/${d.getFullYear()}:${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} +0000`}
+const norm=r=>{if(!r)return r;const last=r.split('/').pop();return last.includes(':')?r:r+':latest'};
+const splitRef=r=>{const i=r.lastIndexOf(':');return [r.slice(0,i),r.slice(i+1)]};
+const short=r=>r.endsWith(':latest')?r.slice(0,-7):r;
+function KIND(img){const b=img.split(':')[0].split('/').pop();if(b==='hello-world')return'hello';if(b==='nginx'||b==='httpd')return'web';if(b==='redis')return'redis';if(b.includes('iris-api')||b==='app-api')return'api';if(b==='postgres')return'db';return'shell'}
+function parseArgs(arr,valueFlags){const pos=[],f={};let rest=null;for(let i=0;i<arr.length;i++){const x=arr[i];if(x==='--'){rest=arr.slice(i+1);break}
+  if(x.startsWith('--')){const eq=x.indexOf('=');if(eq>0)f[x.slice(2,eq)]=x.slice(eq+1);else{const k=x.slice(2);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}}
+  else if(x.startsWith('-')&&x.length>1){const k=x.slice(1);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}
+  else pos.push(x)}return{pos,f,rest}}
+
+/* ============ shared shell inside a container / pod ============ */
+const FILES={
+'Dockerfile':`FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]`,
+'requirements.txt':`fastapi==0.115.0
+uvicorn==0.30.6
+scikit-learn==1.5.2
+joblib==1.4.2`,
+'app.py':`from fastapi import FastAPI
+import joblib, os
+
+app = FastAPI()
+model = joblib.load("model.pkl")
+MODEL_VERSION = os.getenv("MODEL_VERSION", "1.0")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+@app.get("/predict")
+def predict(sl: float = 5.1, sw: float = 3.5, pl: float = 1.4, pw: float = 0.2):
+    label = model.predict([[sl, sw, pl, pw]])[0]
+    return {"prediction": str(label), "model_version": MODEL_VERSION}`,
+'model.pkl':'\u0000BINARY',
+'compose.yaml':`services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+    depends_on:
+      - redis
+  redis:
+    image: redis:7
+    volumes:
+      - redisdata:/data
+
+volumes:
+  redisdata:`,
+'deployment.yaml':`apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: model-api
+  labels:
+    app: model-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: model-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1          # at most 1 extra pod during an update
+      maxUnavailable: 0    # never drop below 3 ready pods
+  template:
+    metadata:
+      labels:
+        app: model-api
+    spec:
+      containers:
+        - name: model-api
+          image: ketan/iris-api:1.0
+          ports:
+            - containerPort: 8000
+          resources:
+            requests: { cpu: "250m", memory: "256Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }`,
+'service.yaml':`apiVersion: v1
+kind: Service
+metadata:
+  name: model-api-svc
+spec:
+  type: NodePort
+  selector:
+    app: model-api          # routes to every pod with this label
+  ports:
+    - port: 80              # the Service's port
+      targetPort: 8000      # the container's port
+      nodePort: 30080       # reachable on every node's IP`
+};
+const ROOTLS='bin   boot  dev  etc  home  lib  media  mnt  opt  proc  root  run  sbin  srv  sys  tmp  usr  var';
+function osRelease(img){const b=img.split(':')[0].split('/').pop();
+  if(b==='alpine'||b==='busybox')return 'NAME="Alpine Linux"\nID=alpine\nVERSION_ID=3.20.3\nPRETTY_NAME="Alpine Linux v3.20"';
+  if(b==='ubuntu')return 'PRETTY_NAME="Ubuntu 22.04.5 LTS"\nNAME="Ubuntu"\nVERSION_ID="22.04"\nID=ubuntu';
+  return 'PRETTY_NAME="Debian GNU/Linux 12 (bookworm)"\nNAME="Debian GNU/Linux"\nVERSION_ID="12"\nVERSION_CODENAME=bookworm\nID=debian'}
+function mainProc(kind){return {web:'nginx: master process nginx -g daemon off;',api:'/usr/local/bin/python /usr/local/bin/uvicorn app:app --host 0.0.0.0 --port 8000',redis:'redis-server *:6379',db:'postgres',shell:'/bin/sh',hello:'/hello'}[kind]}
+function cwdOf(c){return c.kind==='api'?'/app':c.kind==='redis'?'/data':'/'}
+function promptFor(c){const host=c.host||c.id.slice(0,12);const b=c.image.split(':')[0].split('/').pop();if(b==='alpine'||b==='busybox')return '/ # ';return `root@${host}:${cwdOf(c)}# `}
+/* returns string output, or null if command unknown */
+function shellExec(c,cmd,ctx){
+  const t=tokenize(cmd);const p0=t[0];const args=t.slice(1).filter(x=>!x.startsWith('-'));
+  const host=c.host||c.id.slice(0,12);
+  switch(p0){
+    case 'ls':{const p=args[0]||cwdOf(c);
+      if(p==='/'||p==='/.')return ROOTLS+(c.kind==='api'?'  app':'')+(c.kind==='redis'?'  data':'');
+      if(p.replace(/\/$/,'')==='/usr/share/nginx/html'&&c.kind==='web')return '50x.html  index.html';
+      if((p==='/app'||p==='.'&&c.kind==='api')&&c.kind==='api')return 'Dockerfile  app.py  model.pkl  requirements.txt';
+      if((p==='/data'||p==='.')&&c.kind==='redis')return ctx&&ctx.redisHasData&&ctx.redisHasData(c)?'dump.rdb':'';
+      if(p==='.'||p===cwdOf(c))return c.kind==='api'?'Dockerfile  app.py  model.pkl  requirements.txt':ROOTLS;
+      return `ls: cannot access '${p}': No such file or directory`}
+    case 'pwd':return cwdOf(c);
+    case 'hostname':return host;
+    case 'whoami':return 'root';
+    case 'id':return 'uid=0(root) gid=0(root) groups=0(root)';
+    case 'cat':{const f=args[0]||'';if(f==='/etc/os-release')return osRelease(c.image);if(f==='/etc/hostname')return host;
+      const base=f.replace(/^\/app\//,'').replace(/^\.\//,'');if(c.kind==='api'&&FILES[base]&&['Dockerfile','app.py','requirements.txt'].includes(base))return FILES[base];
+      if(c.kind==='web'&&f.includes('index.html'))return '<!DOCTYPE html>\n<html>\n<head><title>Welcome to nginx!</title></head>\n<body><h1>Welcome to nginx!</h1></body>\n</html>';
+      return `cat: ${f}: No such file or directory`}
+    case 'ps':return `PID   USER     COMMAND\n    1 root     ${mainProc(c.kind)}\n   ${20+(Math.random()*20|0)} root     sh\n   ${50+(Math.random()*20|0)} root     ps`;
+    case 'echo':return t.slice(1).join(' ');
+    case 'env':return [`HOSTNAME=${host}`,'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin','HOME=/root'].concat(c.env||[]).join('\n');
+    case 'uname':return `Linux ${host} 6.8.0-45-generic #45-Ubuntu SMP x86_64 GNU/Linux\n# ↑ same kernel as the host: containers share it`;
+    case 'python':case 'python3':if(['api','shell'].includes(c.kind)&&!/alpine|busybox|ubuntu|nginx|redis/.test(c.image)||c.kind==='api')return t.includes('--version')||t.includes('-V')?'Python 3.11.10':'(interactive Python is not simulated — try python --version)';return null;
+    case 'pip':if(c.kind==='api')return t[1]==='list'||t[1]==='freeze'?'fastapi       0.115.0\njoblib        1.4.2\nscikit-learn  1.5.2\nuvicorn       0.30.6':'(pip install inside a running container is lost when it is removed — put it in the Dockerfile)';return null;
+    case 'nginx':if(c.kind==='web')return 'nginx version: nginx/1.27.2';return null;
+    case 'redis-cli':if(c.kind==='redis'&&ctx&&ctx.redis)return ctx.redis(c,t.slice(1));return null;
+    case 'date':return new Date().toUTCString();
+    case 'df':return 'Filesystem      Size  Used Avail Use% Mounted on\noverlay          59G   21G   36G  37% /';
+    case 'curl':return 'sh: 1: curl: not found   (slim images leave out tools you don\'t need)';
+    case 'apt':case 'apt-get':return '(works in a real container, but changes vanish when the container is removed — bake them into the image instead)';
+    case 'cd':return '';
+    case 'clear':return '';
+  }
+  return null;
+}
+function enterShell(term,c,ctx,onExit){
+  const base=term.prompt;term.setPrompt(promptFor(c));
+  term.mode=(cmd,t)=>{const p0=tokenize(cmd)[0];
+    if(p0==='exit'||p0==='logout'){t.mode=null;t.setPrompt(base);if(onExit)onExit();return true}
+    if(p0==='clear'){t.clear();return true}
+    const out=shellExec(c,cmd,ctx);if(out===null){t.print(`sh: 1: ${p0}: not found`,'err');return false}if(out!=='')t.print(out);return true};
+}
+
+/* ============ Terminal ============ */
+class Terminal{
+  constructor(root,{prompt,name,onCommand,after}){
+    root.innerHTML=`<div class="t-bar"><i></i><i></i><i></i><span class="t-name">${esc(name)}</span></div><div class="t-body"><div class="t-out"></div><div class="t-line"><span class="t-prompt"></span><input class="t-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal input" enterkeyhint="send"></div></div>`;
+    this.root=root;this.body=$('.t-body',root);this.out=$('.t-out',root);this.inp=$('.t-in',root);this.pr=$('.t-prompt',root);
+    this.onCommand=onCommand;this.after=after;this.hist=[];this.hi=0;this.mode=null;this.setPrompt(prompt);
+    this.inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();const v=this.inp.value;this.inp.value='';this.run(v)}
+      else if(e.key==='ArrowUp'){if(this.hi>0){this.hi--;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='ArrowDown'){if(this.hi<this.hist.length){this.hi++;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='l'&&e.ctrlKey){e.preventDefault();this.clear()}
+    });
+    this.body.addEventListener('click',()=>{if(!String(window.getSelection&&window.getSelection()))this.inp.focus({preventScroll:true})});
+  }
+  setPrompt(p){this.prompt=p;this.pr.textContent=p}
+  print(text,cls=''){String(text).split('\n').forEach(line=>{const d=document.createElement('div');d.className='ln '+cls;d.textContent=line===''?' ':line;this.out.appendChild(d)});this.scroll()}
+  scroll(){this.body.scrollTop=this.body.scrollHeight}
+  clear(){this.out.innerHTML=''}
+  run(raw){const cmd=String(raw).trim();const d=document.createElement('div');d.className='ln cmd';const p=document.createElement('span');p.className='p';p.textContent=this.prompt;d.append(p,document.createTextNode(cmd));this.out.appendChild(d);
+    if(!cmd){this.scroll();return}this.hist.push(cmd);this.hi=this.hist.length;let ok;
+    try{ok=this.mode?this.mode(cmd,this):this.onCommand(cmd,this)}catch(e){this.print('playground error: '+e.message,'err');console.error(e);ok=false}
+    this.scroll();if(this.after)this.after(cmd,ok)}
+}
+
+/* ============ Lab controller ============ */
+function makeLab(mount,cfg){
+  mount.innerHTML=`<div class="lab ${cfg.cls||''}">
+   <div class="lab-head"><div><div class="lab-title">${cfg.title}</div><div class="scen-desc"></div></div><div class="lab-actions"><span class="step-prog"></span><button class="btn ghost reset">↺ Start again</button></div></div>
+   <div class="scen-tabs"></div>
+   <div class="lab-grid">
+     <aside class="guide"><details open class="steps"><summary>Steps · click a command to run it</summary><ol></ol></details>
+       <details open class="try"><summary>Try these on purpose</summary><ul></ul></details></aside>
+     <div class="work"><div class="term"></div>
+       <div class="suggest"><span>Suggested next commands · click one or type your own</span><div class="chips"></div></div>
+       <div class="extra"></div><div class="viz"></div></div>
+   </div></div>`;
+  const root=mount.firstElementChild,sim=cfg.sim;
+  const tabs=$('.scen-tabs',root),stepsEl=$('.steps ol',root),tryEl=$('.try ul',root),chips=$('.chips',root),viz=$('.viz',root),prog=$('.step-prog',root),desc=$('.scen-desc',root);
+  let cur=0,done=new Set(),celebrated=false;
+  const term=new Terminal($('.term',root),{prompt:cfg.prompt,name:cfg.termName,onCommand:(c,t)=>sim.handle(c,t),after:(c,ok)=>check(c,ok)});
+  sim.onChange=()=>{sim.render(viz);renderSteps()};
+  if(cfg.extra)cfg.extra($('.extra',root),term);
+  cfg.scenarios.forEach((s,i)=>{const b=document.createElement('button');b.className='tab';b.innerHTML=`<span>Scenario ${'ABCDEF'[i]}</span>${esc(s.title)}`;b.onclick=()=>load(i);tabs.appendChild(b)});
+  $('.reset',root).onclick=()=>load(cur);
+  const stepCmd=st=>typeof st.cmd==='function'?st.cmd(sim):st.cmd;
+  function load(i){cur=i;done=new Set();celebrated=false;term.mode=null;term.setPrompt(cfg.prompt);term.clear();const s=cfg.scenarios[i];
+    sim.reset(s);[...tabs.children].forEach((b,j)=>b.classList.toggle('on',j===i));desc.textContent=s.desc;term.print(s.intro,'dim');
+    tryEl.innerHTML='';s.tryThese.forEach(tt=>{const li=document.createElement('li');const b=document.createElement('button');b.className='cmdchip';b.textContent=tt.cmd;b.onclick=()=>term.run(tt.cmd);const n=document.createElement('div');n.className='note';n.innerHTML=tt.why;li.append(b,n);tryEl.appendChild(li)});
+    renderSteps();sim.render(viz)}
+  function renderSteps(){const s=cfg.scenarios[cur];const next=s.steps.findIndex((_,i)=>!done.has(i));stepsEl.innerHTML='';
+    s.steps.forEach((st,i)=>{const li=document.createElement('li');li.className=(done.has(i)?'done':'')+(i===next?' next':'');const b=document.createElement('button');b.className='cmdchip';const txt=stepCmd(st);b.textContent=txt;b.onclick=()=>term.run(stepCmd(st));const n=document.createElement('div');n.className='note';n.innerHTML=st.note;li.append(b,n);stepsEl.appendChild(li)});
+    prog.textContent=`${done.size} / ${s.steps.length} steps`;
+    chips.innerHTML='';const sug=[];s.steps.forEach((st,i)=>{if(!done.has(i)&&sug.length<2)sug.push(stepCmd(st))});
+    if(term.mode&&!sug.includes('exit'))sug.push('exit');sug.push('help','clear');
+    sug.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.onclick=()=>term.run(c);chips.appendChild(b)})}
+  function check(c,ok){if(ok===false){renderSteps();return}const s=cfg.scenarios[cur];const n=c.trim().replace(/\s+/g,' ');
+    const i=s.steps.findIndex((st,j)=>!done.has(j)&&st.match.test(n));if(i>=0)done.add(i);renderSteps();
+    if(done.size===s.steps.length&&!celebrated){celebrated=true;term.print('✔ Scenario complete! Try the "Try these on purpose" commands, or pick the next scenario.','ok')}}
+  load(0);return{term,load};
+}
+
+/* ============ Docker simulator ============ */
+const HUB={};
+function createDockerSim(){
+  const REMOTE={'nginx:latest':'192MB','nginx:1.27':'192MB','nginx:1.25':'187MB','python:3.11-slim':'131MB','python:3.12-slim':'124MB','redis:7':'117MB','redis:latest':'117MB','alpine:latest':'7.8MB','busybox:latest':'4.3MB','ubuntu:22.04':'77.9MB','ubuntu:latest':'78.1MB','hello-world:latest':'13.3kB','postgres:16':'432MB','httpd:latest':'148MB'};
+  const A=['eager','brave','quirky','focused','jolly','nifty','zen','vibrant','sleepy','clever'],B=['turing','hopper','lovelace','curie','raman','bose','noether','ramanujan','kalam','shannon'];
+  const PORT={web:80,api:8000,redis:6379,db:5432};
+  const COMMAND={hello:'"/hello"',web:'"/docker-entrypoint.…"',redis:'"docker-entrypoint.s…"',api:'"uvicorn app:app --h…"',db:'"docker-entrypoint.s…"',shell:'"/bin/sh"'};
+  let S;
+  const sim={onChange(){},reset,handle,render};
+  const fail=(t,m)=>{t.print(m,'err');return false};
+  const ch=()=>sim.onChange();
+  function reset(sc){S={images:{},containers:[],volumes:{},networks:['bridge','host','none'],loggedIn:false,files:{},cache:new Set(),ver:{req:1,src:1},store:{},ip:2};
+    (sc.files||[]).forEach(f=>S.files[f]=FILES[f]);(sc.preImages||[]).forEach(r=>addImage(r,REMOTE[r]||'250MB'));}
+  function addImage(ref,size,id){ref=norm(ref);S.images[ref]={ref,id:id||hex(12),size,created:Date.now()};return S.images[ref]}
+  const findImg=r=>{if(!r)return null;if(S.images[norm(r)])return S.images[norm(r)];return Object.values(S.images).find(i=>i.id.startsWith(r)&&r.length>=3)||null};
+  const findC=r=>S.containers.find(c=>c.name===r)||(r&&r.length>=2?S.containers.find(c=>c.id.startsWith(r)):null);
+  const running=()=>S.containers.filter(c=>c.status==='running');
+  const portBusy=(h,except)=>running().find(c=>c!==except&&c.ports.some(p=>p.h===h));
+  const storeKey=c=>{const v=c.vols.find(v=>v.path==='/data');return v?'vol:'+v.name:'c:'+c.id};
+  const ctx={redis(c,args){const st=S.store[storeKey(c)]=S.store[storeKey(c)]||{};const op=(args[0]||'').toUpperCase();
+      if(op==='PING')return 'PONG';if(op==='SET'){st[args[1]]=args.slice(2).join(' ');ch();return 'OK'}
+      if(op==='GET')return st[args[1]]!==undefined?`"${st[args[1]]}"`:'(nil)';
+      if(op==='INCR'){st[args[1]]=String((parseInt(st[args[1]]||'0'))+1);return '(integer) '+st[args[1]]}
+      if(op==='KEYS'){const k=Object.keys(st);return k.length?k.map((x,i)=>`${i+1}) "${x}"`).join('\n'):'(empty array)'}
+      if(op==='DEL'){const had=args[1] in st;delete st[args[1]];return '(integer) '+(had?1:0)}
+      return op?`(error) ERR unknown command '${args[0]}'`:'(interactive redis-cli not simulated — try: redis-cli GET key)'},
+    redisHasData(c){return Object.keys(S.store[storeKey(c)]||{}).length>0}};
+
+  function pull(ref,t){ref=norm(ref);const[repo,tag]=splitRef(ref);
+    if(S.images[ref]){t.print(`${tag}: Pulling from ${repo.includes('/')?repo:'library/'+repo}\nDigest: sha256:${hex(64)}\nStatus: Image is up to date for ${short(ref)}`);return true}
+    const size=REMOTE[ref]||HUB[ref];
+    if(!size)return fail(t,`Error response from daemon: pull access denied for ${repo}, repository does not exist or may require 'docker login': denied: requested access to the resource is denied`);
+    const lines=[`${tag}: Pulling from ${repo.includes('/')?repo:'library/'+repo}`];const n=ref.startsWith('hello')?1:3+(Math.random()*3|0);
+    for(let i=0;i<n;i++)lines.push(`${hex(12)}: Pull complete`);lines.push(`Digest: sha256:${hex(64)}`,`Status: Downloaded newer image for ${ref}`);if(!repo.includes('/'))lines.push(`docker.io/library/${ref}`);
+    t.print(lines.join('\n'));addImage(ref,size);ch();return true}
+
+  function logsOf(c){const k=c.kind;let base='';
+    if(k==='web')base=`/docker-entrypoint.sh: /docker-entrypoint.d/ is not empty, will attempt to perform configuration\n/docker-entrypoint.sh: Configuration complete; ready for start up\n${nginxTime()} [notice] 1#1: using the "epoll" event method\n${nginxTime()} [notice] 1#1: nginx/1.27.2\n${nginxTime()} [notice] 1#1: start worker processes`;
+    else if(k==='api')base=`INFO:     Started server process [1]\nINFO:     Waiting for application startup.\nModel loaded: iris (version ${verOf(c.image)})\nINFO:     Application startup complete.\nINFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)`;
+    else if(k==='redis')base=`1:C ${new Date().toUTCString().slice(5,25)} # Redis version=7.4.1, bits=64, pid=1, just started\n1:M ${new Date().toUTCString().slice(5,25)} * Server initialized\n1:M ${new Date().toUTCString().slice(5,25)} * Ready to accept connections tcp`;
+    else if(k==='db')base='database system is ready to accept connections';
+    else if(k==='hello')base=HELLO;
+    return base+(c.hits.length?'\n'+c.hits.join('\n'):'')}
+  const verOf=img=>{const tag=splitRef(norm(img))[1];return /^\d/.test(tag)?tag:'1.0'};
+  const HELLO=`\nHello from Docker!\nThis message shows that your installation appears to be working correctly.\n\nTo generate this message, Docker took the following steps:\n 1. The Docker client contacted the Docker daemon.\n 2. The Docker daemon pulled the "hello-world" image from the Docker Hub.\n 3. The Docker daemon created a new container from that image which runs the\n    executable that produces the output you are currently reading.\n 4. The Docker daemon streamed that output to the Docker client, which sent it\n    to your terminal.`;
+
+  function run(args,t){
+    const o={d:false,it:false,rm:false,name:null,ports:[],vols:[],env:[],net:'bridge'};let img=null;const rest=[];
+    for(let i=0;i<args.length;i++){const a=args[i];if(img){rest.push(a);continue}
+      if(a==='-d'||a==='--detach')o.d=true;else if(['-it','-ti','-i','-t','--interactive','--tty'].includes(a))o.it=true;else if(a==='-dit'||a==='-itd'){o.d=o.it=true}
+      else if(a==='--rm')o.rm=true;else if(a==='--name')o.name=args[++i];else if(a.startsWith('--name='))o.name=a.slice(7);
+      else if(a==='-p'||a==='--publish')o.ports.push(args[++i]);else if(a==='-v'||a==='--volume')o.vols.push(args[++i]);
+      else if(a==='-e'||a==='--env')o.env.push(args[++i]);else if(a==='--network'||a==='--net')o.net=args[++i];else if(a.startsWith('--network='))o.net=a.slice(10);
+      else if(a.startsWith('--restart')){if(a==='--restart')i++}
+      else if(a.startsWith('-'))return fail(t,`unknown flag: ${a}\nSee 'docker run --help'.`);else img=a}
+    if(!img)return fail(t,`"docker run" requires at least 1 argument.\nSee 'docker run --help'.`);
+    const ports=[];for(const p of o.ports){const m=/^(?:\d+\.\d+\.\d+\.\d+:)?(\d+):(\d+)(\/tcp)?$/.exec(p||'');if(!m)return fail(t,`docker: invalid publish opts format (should be name=value but got '${p}').\nTip: -p HOST_PORT:CONTAINER_PORT, e.g. -p 8080:80`);ports.push({h:+m[1],c:+m[2]})}
+    if(!S.networks.includes(o.net))return fail(t,`docker: Error response from daemon: network ${o.net} not found.`);
+    if(o.name&&S.containers.find(c=>c.name===o.name)){const x=S.containers.find(c=>c.name===o.name);return fail(t,`docker: Error response from daemon: Conflict. The container name "/${o.name}" is already in use by container "${x.id}". You have to remove (or rename) that container to be able to reuse that name.`)}
+    const ref=norm(img);
+    if(!S.images[ref]){t.print(`Unable to find image '${ref}' locally`);if(!pull(ref,t))return false}
+    const vols=[];for(const v of o.vols){const [src,path]=(v||'').split(':');if(!src||!path)return fail(t,`docker: invalid volume spec "${v}". Use NAME:/path/in/container`);
+      if(!/^[./~]/.test(src)&&!S.volumes[src])S.volumes[src]={created:Date.now()};vols.push({name:src,path})}
+    const kind=KIND(ref);
+    const c={id:hex(64),name:o.name||`${A[Math.random()*A.length|0]}_${B[Math.random()*B.length|0]}`,image:ref,kind,status:'running',exit:0,ports,vols,net:o.net,created:Date.now(),started:Date.now(),stopped:0,env:o.env,hits:[],ip:`172.${o.net==='bridge'?17:18}.0.${S.ip++}`,rm:o.rm};
+    S.containers.push(c);
+    const busy=ports.find(p=>portBusy(p.h,c));
+    if(busy){c.status='created';ch();return fail(t,`docker: Error response from daemon: driver failed programming external connectivity on endpoint ${c.name} (${hex(64)}): Bind for 0.0.0.0:${busy.h} failed: port is already allocated.`)}
+    const finish=code=>{c.status='exited';c.exit=code||0;c.stopped=Date.now();if(c.rm)S.containers=S.containers.filter(x=>x!==c);ch()};
+    if(kind==='hello'){t.print(HELLO);finish(0);return true}
+    if(kind==='shell'&&/^(\/bin\/)?(ba)?sh$/.test(rest.join(' '))){if(rest[0].includes('bash')&&/alpine|busybox/.test(ref)){finish(127);return fail(t,'docker: Error response from daemon: failed to create task for container: exec: "bash": executable file not found in $PATH\n(alpine images only ship sh)')}rest.length=0}
+    if(kind==='shell'){
+      if(rest.length){const out=shellExec(c,rest.join(' '),ctx);if(out===null){t.print(`docker: Error response from daemon: failed to create task for container: exec: "${rest[0]}": executable file not found in $PATH`,'err');finish(127);return false}if(out)t.print(out);finish(0);return true}
+      if(o.it&&!o.d){t.print('(you are now inside the container — type exit to leave)','dim');enterShell(t,c,ctx,()=>finish(0));ch();return true}
+      if(o.d&&o.it){t.print(c.id);ch();return true}
+      if(o.d){t.print(c.id)}finish(0);t.print(`(the container's main process ${mainProc(kind)} had nothing to do, so it exited immediately — try: docker run -it ${short(ref)} sh)`,'dim');return true}
+    if(rest.length&&kind!=='api'){const out=shellExec(c,rest.join(' '),ctx);if(out!==null){if(out)t.print(out);finish(0);return true}}
+    if(o.d){t.print(c.id);ch();return true}
+    t.print(logsOf(c));t.print('^C',"dim");t.print('(playground) Without -d the terminal stays attached to the container\'s logs; pressing Ctrl+C then stops it. It has been stopped. Use -d to run in the background.','dim');finish(0);return true}
+
+  function ps(args,t){const all=args.includes('-a')||args.includes('--all');const q=args.includes('-q');const list=S.containers.filter(c=>all||c.status==='running');
+    if(q){if(list.length)t.print(list.map(c=>c.id.slice(0,12)).join('\n'));return true}
+    const rows=[['CONTAINER ID','IMAGE','COMMAND','CREATED','STATUS','PORTS','NAMES']];
+    list.slice().reverse().forEach(c=>{const st=c.status==='running'?'Up '+ago(c.started):c.status==='created'?'Created':`Exited (${c.exit}) ${ago(c.stopped)} ago`;
+      const pp=c.status==='running'?(c.ports.length?c.ports.map(p=>`0.0.0.0:${p.h}->${p.c}/tcp`).join(', '):(PORT[c.kind]?`${PORT[c.kind]}/tcp`:'')):'';
+      rows.push([c.id.slice(0,12),short(c.image),COMMAND[c.kind],ago(c.created)+' ago',st,pp,c.name])});
+    t.print(table(rows));return true}
+  function images(t){const rows=[['REPOSITORY','TAG','IMAGE ID','CREATED','SIZE']];Object.values(S.images).sort((a,b)=>b.created-a.created).forEach(i=>{const [r,tg]=i.ref.startsWith('<none>')?['<none>','<none>']:splitRef(i.ref);rows.push([r,tg,i.id,ago(i.created)+' ago',i.size])});t.print(table(rows));return true}
+
+  function build(args,t){const {pos,f}=parseArgs(args,['t','tag','f','file']);const tag=f.t||f.tag;const ctxDir=pos[0];
+    if(!ctxDir)return fail(t,`ERROR: "docker buildx build" requires exactly 1 argument.\nSee 'docker buildx build --help'.\n(hint: the build context goes last, usually "." for the current folder)`);
+    if(!S.files['Dockerfile'])return fail(t,'ERROR: failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory');
+    const hadBase=!!S.images['python:3.11-slim'];if(!hadBase)addImage('python:3.11-slim',REMOTE['python:3.11-slim']);
+    const steps=[['WORKDIR /app','wd',0.1],['COPY requirements.txt .','req'+S.ver.req,0.1],['RUN pip install --no-cache-dir -r requirements.txt','pip'+S.ver.req,38.4],['COPY . .','src'+S.ver.req+'.'+S.ver.src,0.2]];
+    let key='base',miss=false,total=hadBase?0.6:6.2;const lines=[];const cached=[];
+    lines.push(` => [internal] load build definition from Dockerfile                    0.0s`,` => [internal] load metadata for docker.io/library/python:3.11-slim     ${hadBase?'0.4':'1.1'}s`,` => [internal] load .dockerignore                                       0.0s`);
+    lines.push(` => [1/5] FROM docker.io/library/python:3.11-slim@sha256:${hex(12)}…   ${hadBase?'0.0':'5.1'}s`);
+    lines.push(` => [internal] load build context                                       0.1s`);
+    steps.forEach(([txt,k,sec],i)=>{key+='|'+k;const hit=!miss&&S.cache.has(key);if(!hit){miss=true;S.cache.add(key);total+=sec}else cached.push(i+2);
+      lines.push(` => ${hit?'CACHED ':''}[${i+2}/5] ${txt}`.padEnd(70)+(hit?'0.0s':sec.toFixed(1)+'s'))});
+    total+=0.4;lines.push(` => exporting to image                                                  0.4s`,` => => exporting layers                                                 0.3s`,` => => writing image sha256:${hex(12)}…                                 0.0s`);
+    const id=hex(12);const ref=tag?norm(tag):'<none>:'+id;if(tag)lines.push(` => => naming to docker.io/library/${ref}`);
+    t.print(`[+] Building ${total.toFixed(1)}s (10/10) FINISHED`+'                     docker:default');t.print(lines.join('\n'));
+    addImage(ref,'248MB',id);
+    t.print(cached.length?`(cache: steps ${cached.join(', ')} reused; only what changed was rebuilt — total ${total.toFixed(1)}s)`:`(first build: every layer was built from scratch — ${total.toFixed(1)}s)`,'dim');
+    if(!tag)t.print('(no -t given, so the image is untagged: <none>:<none>. Tag it with docker tag or rebuild with -t name:version)','dim');
+    ch();return true}
+
+  function push(args,t){const r=args[0];if(!r)return fail(t,`"docker push" requires exactly 1 argument.`);const ref=norm(r);const img=S.images[ref];
+    if(!img)return fail(t,`An image does not exist locally with the tag: ${short(ref)}`);
+    const[repo,tag]=splitRef(ref);
+    t.print(`The push refers to repository [docker.io/${repo.includes('/')?repo:'library/'+repo}]`);
+    if(!repo.includes('/'))return fail(t,`${hex(12)}: Preparing\ndenied: requested access to the resource is denied\n(hint: Docker Hub images need your namespace — docker tag ${short(ref)} ketan/${short(ref)})`);
+    if(!S.loggedIn)return fail(t,`${hex(12)}: Preparing\nunauthorized: authentication required\n(hint: run docker login first)`);
+    t.print(`${hex(12)}: Pushed\n${hex(12)}: Pushed\n${hex(12)}: Pushed\n${hex(12)}: Mounted from library/python\n${hex(12)}: Mounted from library/python\n${tag}: digest: sha256:${hex(64)} size: 1996`);
+    HUB[ref]=img.size;t.print(`(${short(ref)} is now in the registry. Any machine, including the Kubernetes lab below, can pull it.)`,'dim');ch();return true}
+
+  function curl(args,t){const url=args.find(a=>/localhost|127\.0\.0\.1/.test(a));if(!url)return fail(t,'curl: (6) Could not resolve host — in this lab, try curl localhost:PORT');
+    const m=/(?:localhost|127\.0\.0\.1):?(\d+)?(\/\S*)?/.exec(url);const port=+(m[1]||80);const path=m[2]||'/';
+    const c=running().find(c=>c.ports.some(p=>p.h===port));if(!c)return fail(t,`curl: (7) Failed to connect to localhost port ${port} after 0 ms: Couldn't connect to server`+(S.containers.some(x=>x.ports.some(p=>p.h===port))?'\n(a container maps this port, but it isn\'t running)':'\n(is the container running, and did you publish the port with -p HOST:CONTAINER?)'));
+    if(c.kind==='web'){c.hits.push(`172.17.0.1 - - [${clfTime()}] "GET ${path} HTTP/1.1" 200 615 "-" "curl/8.5.0" "-"`);t.print('<!DOCTYPE html>\n<html>\n<head>\n<title>Welcome to nginx!</title>\n</head>\n<body>\n<h1>Welcome to nginx!</h1>\n<p>If you see this page, the nginx web server is successfully installed and\nworking. Further configuration is required.</p>\n</body>\n</html>');ch();return true}
+    if(c.kind==='api'){c.hits.push(`INFO:     172.17.0.1:${40000+(Math.random()*20000|0)} - "GET ${path} HTTP/1.1" 200 OK`);
+      if(path.startsWith('/health'))t.print('{"status":"ok"}');
+      else if(path.startsWith('/predict')){let extra='';if(c.env.some(e=>e.startsWith('REDIS_HOST'))){const r=S.containers.find(x=>x.kind==='redis'&&x.status==='running'&&x.net===c.net);
+          if(r){const st=S.store[storeKey(r)]=S.store[storeKey(r)]||{};st.predictions=String((+st.predictions||0)+1);extra=`,"total_predictions":${st.predictions}`}else extra=',"total_predictions":null,"warning":"redis unreachable"'}
+        t.print(`{"prediction":"setosa","model_version":"${verOf(c.image)}"${extra}}`)}
+      else t.print('{"message":"Iris model API. Try /predict or /health"}');ch();return true}
+    if(c.kind==='redis')return fail(t,'curl: (52) Empty reply from server   (Redis speaks its own protocol, not HTTP)');
+    t.print('OK');return true}
+
+  function compose(args,t){const sub=args[0];const has=!!S.files['compose.yaml'];
+    if(!has&&sub!=='version')return fail(t,'no configuration file provided: not found');
+    const names={redis:'app-redis-1',api:'app-api-1'};
+    if(sub==='up'){const lines=[];if(!S.images['redis:7']){addImage('redis:7',REMOTE['redis:7']);lines.push(' ✔ redis Pulled                                   4.2s')}
+      if(!S.images['app-api:latest']){addImage('app-api:latest','248MB');lines.push(' ✔ Service api  Built                             21.3s')}
+      if(!S.networks.includes('app_default')){S.networks.push('app_default');lines.push(' ✔ Network app_default        Created             0.1s')}
+      if(!S.volumes['app_redisdata']){S.volumes['app_redisdata']={created:Date.now()};lines.push(' ✔ Volume "app_redisdata"     Created             0.0s')}
+      const mk=(svc,image,ports,vols,env)=>{let c=S.containers.find(x=>x.name===names[svc]);if(c&&c.status==='running'){lines.push(` ✔ Container ${c.name}        Running             0.0s`);return true}
+        const busy=ports.find(p=>portBusy(p.h,c));if(busy){t.print(lines.join('\n'));fail(t,`Error response from daemon: driver failed programming external connectivity on endpoint ${names[svc]}: Bind for 0.0.0.0:${busy.h} failed: port is already allocated`);return false}
+        if(!c){c={id:hex(64),name:names[svc],image,kind:KIND(image),status:'running',exit:0,ports,vols,net:'app_default',created:Date.now(),started:Date.now(),stopped:0,env,hits:[],ip:`172.18.0.${S.ip++}`,compose:svc};S.containers.push(c);lines.push(` ✔ Container ${c.name}        Created             0.1s`)}
+        c.status='running';c.started=Date.now();lines.push(` ✔ Container ${c.name}        Started             0.3s`);return true};
+      if(!mk('redis','redis:7',[],[{name:'app_redisdata',path:'/data'}],[]))return false;
+      if(!mk('api','app-api:latest',[{h:8000,c:8000}],[],['REDIS_HOST=redis']))return false;
+      t.print(`[+] Running ${lines.length}/${lines.length}\n`+lines.join('\n'));if(!args.includes('-d')&&!args.includes('--detach'))t.print('(playground: started in the background for you; normally use -d)','dim');ch();return true}
+    if(sub==='ps'){const rows=[['NAME','IMAGE','COMMAND','SERVICE','CREATED','STATUS','PORTS']];S.containers.filter(c=>c.compose&&c.status==='running').forEach(c=>rows.push([c.name,short(c.image),COMMAND[c.kind],c.compose,ago(c.created)+' ago','Up '+ago(c.started),c.ports.map(p=>`0.0.0.0:${p.h}->${p.c}/tcp`).join(', ')||`${PORT[c.kind]}/tcp`]));t.print(table(rows));return true}
+    if(sub==='logs'){S.containers.filter(c=>c.compose).forEach(c=>t.print(logsOf(c).split('\n').map(l=>`${c.compose}-1  | ${l}`).join('\n')));return true}
+    if(sub==='down'){const lines=[];S.containers.filter(c=>c.compose).forEach(c=>{lines.push(` ✔ Container ${c.name}  Removed`)});S.containers=S.containers.filter(c=>!c.compose);
+      if(S.networks.includes('app_default')){S.networks=S.networks.filter(n=>n!=='app_default');lines.push(' ✔ Network app_default  Removed')}
+      if(args.includes('-v')||args.includes('--volumes')){if(S.volumes['app_redisdata']){delete S.volumes['app_redisdata'];delete S.store['vol:app_redisdata'];lines.push(' ✔ Volume app_redisdata  Removed')}}
+      t.print(`[+] Running ${lines.length}/${lines.length}\n`+lines.join('\n'));if(!(args.includes('-v')||args.includes('--volumes'))&&S.volumes['app_redisdata'])t.print('(the volume app_redisdata was kept — your data survives. down -v would delete it)','dim');ch();return true}
+    return fail(t,`unknown docker compose command: ${sub||''}\nTry: docker compose up -d | ps | logs | down`)}
+
+  function handle(raw,t){const a=tokenize(raw);const c0=a[0];
+    if(c0==='clear'){t.clear();return true}
+    if(c0==='help'){t.print(`Simulated commands in this lab:
+  docker run [-d] [-it] [--rm] [--name N] [-p H:C] [-v vol:/path] [-e K=V] [--network N] IMAGE [CMD]
+  docker ps [-a]   images   pull   build -t name:tag .   tag   push   login   logout
+  docker stop | start | restart | rm [-f] | rmi | logs | exec [-it] | inspect | stats
+  docker volume create|ls|rm|inspect     docker network create|ls|rm|inspect
+  docker compose up -d | ps | logs | down [-v]
+  docker system prune   docker system df   docker version   docker info
+  curl localhost:PORT[/path]   ls   cat FILE   echo "text" >> FILE   clear
+Images available on the pretend Docker Hub: nginx, redis:7, python:3.11-slim, alpine, ubuntu:22.04, busybox, postgres:16, hello-world
+Tip: ↑ / ↓ recall history.`);return true}
+    if(c0==='ls'){const f=Object.keys(S.files);if(f.length)t.print(f.join('  '));return true}
+    if(c0==='cat'){const f=a[1];if(!f)return fail(t,'cat: missing file operand');if(!(f in S.files))return fail(t,`cat: ${f}: No such file or directory`);if(f==='model.pkl'){t.print('(binary file: a pickled scikit-learn model)','dim');return true}t.print(S.files[f]);return true}
+    if(c0==='echo'){const gt=a.indexOf('>>'),g1=a.indexOf('>');const red=gt>=0?gt:g1;if(red<0){t.print(a.slice(1).join(' '));return true}
+      const f=a[red+1];if(!f)return fail(t,'bash: syntax error near unexpected token `newline\'');const txt=a.slice(1,red).join(' ');
+      S.files[f]=(gt>=0&&S.files[f]?S.files[f]+'\n':'')+txt;S.ver.src++;if(f==='requirements.txt')S.ver.req++;ch();return true}
+    if(c0==='curl')return curl(a.slice(1),t);
+    if(c0==='pwd'){t.print('/home/ketan/iris-api');return true}
+    if(c0==='whoami'){t.print('ketan');return true}
+    if(c0==='cd'){t.print('(this playground has a single folder)','dim');return true}
+    if(c0==='kubectl'||c0==='minikube')return fail(t,`${c0}: this terminal is the Docker lab — Kubernetes commands live in section 08 below.`);
+    if(c0==='sudo'){return handle(raw.replace(/^sudo\s+/,''),t)}
+    if(c0==='exit'){t.print('(nothing to exit — you are on the host)','dim');return true}
+    if(c0!=='docker')return fail(t,`bash: ${c0}: command not found`);
+    let sub=a[1];let args=a.slice(2);
+    if(sub==='container'){const m={ls:'ps',list:'ps'};sub=m[args[0]]||args[0];args=args.slice(1)}
+    else if(sub==='image'){const m={ls:'images',list:'images',rm:'rmi'};sub=m[args[0]]||args[0];args=args.slice(1)}
+    if(sub==='-v'||sub==='--version'){t.print('Docker version 27.3.1, build ce12230');return true}
+    switch(sub){
+      case undefined:case '--help':case 'help':return handle('help',t);
+      case 'version':t.print('Client:\n Version:           27.3.1\n API version:       1.47\n OS/Arch:           linux/amd64\n\nServer: Docker Engine - Community\n Engine:\n  Version:          27.3.1\n containerd:\n  Version:          1.7.22\n runc:\n  Version:          1.1.14');return true;
+      case 'info':t.print(`Containers: ${S.containers.length}\n Running: ${running().length}\n Paused: 0\n Stopped: ${S.containers.length-running().length}\nImages: ${Object.keys(S.images).length}\nServer Version: 27.3.1\nStorage Driver: overlay2\nCgroup Driver: systemd\nCgroup Version: 2\nKernel Version: 6.8.0-45-generic\nOperating System: Ubuntu 24.04.1 LTS\nCPUs: 8\nTotal Memory: 15.5GiB`);return true;
+      case 'run':return run(args,t);
+      case 'create':{const r=run(['--detach'].concat(args),{print(){}});const c=S.containers[S.containers.length-1];if(r&&c){c.status='created';t.print(c.id);ch()}return r}
+      case 'ps':return ps(args,t);
+      case 'images':return images(t);
+      case 'pull':if(!args[0])return fail(t,'"docker pull" requires exactly 1 argument.');return pull(args[0],t);
+      case 'build':return build(args,t);
+      case 'tag':{const[src,dst]=args;if(!src||!dst)return fail(t,'"docker tag" requires exactly 2 arguments.\nUsage: docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]');const i=findImg(src);if(!i)return fail(t,`Error response from daemon: No such image: ${src}`);addImage(dst,i.size,i.id);ch();return true}
+      case 'login':S.loggedIn=true;t.print('Log in with your Docker ID or email address to push and pull images from Docker Hub.\nUsername: ketan\nPassword: ••••••••\n\nLogin Succeeded');t.print('(playground: credentials are faked; real logins store a token in ~/.docker/config.json)','dim');return true;
+      case 'logout':S.loggedIn=false;t.print('Removing login credentials for https://index.docker.io/v1/');return true;
+      case 'push':return push(args,t);
+      case 'stop':case 'kill':{if(!args.length)return fail(t,`"docker ${sub}" requires at least 1 argument.`);let ok=true;args.filter(x=>!x.startsWith('-')).forEach(r=>{const c=findC(r);if(!c){fail(t,`Error response from daemon: No such container: ${r}`);ok=false;return}if(c.status==='running'){c.status='exited';c.exit=sub==='kill'?137:0;c.stopped=Date.now();if(c.rm)S.containers=S.containers.filter(x=>x!==c)}t.print(r)});ch();return ok}
+      case 'start':case 'restart':{if(!args.length)return fail(t,`"docker ${sub}" requires at least 1 argument.`);let ok=true;args.filter(x=>!x.startsWith('-')).forEach(r=>{const c=findC(r);if(!c){fail(t,`Error response from daemon: No such container: ${r}`);ok=false;return}
+          const busy=c.ports.find(p=>portBusy(p.h,c));if(busy){fail(t,`Error response from daemon: driver failed programming external connectivity on endpoint ${c.name}: Bind for 0.0.0.0:${busy.h} failed: port is already allocated\nError: failed to start containers: ${r}`);ok=false;return}
+          if(c.kind==='hello'){t.print(HELLO);c.status='exited';c.stopped=Date.now();return}
+          if(c.kind==='shell'&&!c.ports.length){c.status='exited';c.stopped=Date.now();t.print(r);return}
+          c.status='running';c.started=Date.now();t.print(r)});ch();return ok}
+      case 'rm':{const force=args.includes('-f')||args.includes('--force');const refs=args.filter(x=>!x.startsWith('-'));if(!refs.length)return fail(t,'"docker rm" requires at least 1 argument.');let ok=true;
+        refs.forEach(r=>{const c=findC(r);if(!c){fail(t,`Error response from daemon: No such container: ${r}`);ok=false;return}
+          if(c.status==='running'&&!force){fail(t,`Error response from daemon: cannot remove container "/${c.name}": container is running: stop the container before removing or force remove`);ok=false;return}
+          S.containers=S.containers.filter(x=>x!==c);t.print(r)});ch();return ok}
+      case 'rmi':{const refs=args.filter(x=>!x.startsWith('-'));const force=args.includes('-f');if(!refs.length)return fail(t,'"docker rmi" requires at least 1 argument.');let ok=true;
+        refs.forEach(r=>{const i=findImg(r);if(!i){fail(t,`Error response from daemon: No such image: ${r}`);ok=false;return}
+          const user=S.containers.find(c=>S.images[c.image]&&S.images[c.image].id===i.id);
+          if(user&&!force){fail(t,`Error response from daemon: conflict: unable to remove repository reference "${short(i.ref)}" (must force) - container ${user.id.slice(0,12)} is using its referenced image ${i.id}`);ok=false;return}
+          delete S.images[i.ref];t.print(`Untagged: ${short(i.ref)}`);if(!Object.values(S.images).some(x=>x.id===i.id))t.print(`Deleted: sha256:${i.id}${hex(52)}`)});ch();return ok}
+      case 'logs':{const r=args.filter(x=>!x.startsWith('-'))[0];const c=findC(r);if(!c)return fail(t,`Error response from daemon: No such container: ${r||''}`);const l=logsOf(c);if(l)t.print(l);if(args.includes('-f'))t.print('(playground: -f would keep following new log lines until Ctrl+C)','dim');return true}
+      case 'exec':{const {pos,f,rest}=parseArgs(args,['e','u','w']);const r=pos[0];const cmd=(rest||pos.slice(1)).join(' ');const c=findC(r);if(!r)return fail(t,'"docker exec" requires at least 2 arguments.');
+        if(!c)return fail(t,`Error response from daemon: No such container: ${r}`);if(c.status!=='running')return fail(t,`Error response from daemon: container ${c.id} is not running`);
+        if(!cmd)return fail(t,'"docker exec" requires at least 2 arguments.\nUsage: docker exec [OPTIONS] CONTAINER COMMAND [ARG...]');
+        const it=f.it||f.ti||(f.i&&f.t);
+        if(/^(ba)?sh$|^\/bin\/(ba)?sh$/.test(cmd)){if(!it)return true;if(cmd.includes('bash')&&/alpine|busybox/.test(c.image))return fail(t,'OCI runtime exec failed: exec failed: unable to start container process: exec: "bash": executable file not found in $PATH: unknown\n(alpine images only have sh)');
+          t.print('(you are now inside the running container — type exit to leave; the container keeps running)','dim');enterShell(t,c,ctx,()=>ch());ch();return true}
+        const out=shellExec(c,cmd,ctx);if(out===null)return fail(t,`OCI runtime exec failed: exec failed: unable to start container process: exec: "${tokenize(cmd)[0]}": executable file not found in $PATH: unknown`);if(out)t.print(out);ch();return true}
+      case 'inspect':{const r=args[0];const c=findC(r);if(c){t.print(JSON.stringify([{Id:c.id,Created:new Date(c.created).toISOString(),State:{Status:c.status,Running:c.status==='running',Pid:c.status==='running'?2000+(c.id.charCodeAt(0)%900):0,ExitCode:c.exit},Image:'sha256:'+(S.images[c.image]||{id:hex(12)}).id+'…',Name:'/'+c.name,Config:{Image:short(c.image),Env:c.env,ExposedPorts:PORT[c.kind]?{[PORT[c.kind]+'/tcp']:{}}:{}},HostConfig:{PortBindings:Object.fromEntries(c.ports.map(p=>[p.c+'/tcp',[{HostIp:'',HostPort:String(p.h)}]]))},Mounts:c.vols.map(v=>({Type:'volume',Name:v.name,Destination:v.path})),NetworkSettings:{Networks:{[c.net]:{IPAddress:c.status==='running'?c.ip:''}}}}],null,2));return true}
+        const i=findImg(r);if(i){t.print(JSON.stringify([{Id:'sha256:'+i.id+'…',RepoTags:[short(i.ref)],Size:i.size,Os:'linux',Architecture:'amd64',RootFS:{Type:'layers',Layers:[1,2,3,4,5].map(()=>'sha256:'+hex(16)+'…')}}],null,2));return true}
+        if(S.volumes[r]){t.print(JSON.stringify([{Name:r,Driver:'local',Mountpoint:`/var/lib/docker/volumes/${r}/_data`,Scope:'local'}],null,2));return true}
+        return fail(t,`Error: No such object: ${r||''}`)}
+      case 'stats':{const rows=[['CONTAINER ID','NAME','CPU %','MEM USAGE / LIMIT','MEM %','NET I/O','PIDS']];running().forEach(c=>{const mem={web:9.8,api:182.4,redis:6.1,db:41.2,shell:1.1}[c.kind]||5;rows.push([c.id.slice(0,12),c.name,(Math.random()*(c.kind==='api'?4:0.6)).toFixed(2)+'%',`${(mem*(0.95+Math.random()*0.1)).toFixed(1)}MiB / 15.5GiB`,(mem/158.7).toFixed(2)+'%',`${(Math.random()*20).toFixed(1)}kB / 0B`,{web:9,api:3,redis:6}[c.kind]||1])});t.print(table(rows));t.print('(one snapshot; real docker stats refreshes live. These numbers come from cgroups.)','dim');return true}
+      case 'volume':{const op=args[0],n=args[1];
+        if(op==='create'){const name=n||hex(64);S.volumes[name]=S.volumes[name]||{created:Date.now()};t.print(name);ch();return true}
+        if(op==='ls'){const rows=[['DRIVER','VOLUME NAME']];Object.keys(S.volumes).forEach(v=>rows.push(['local',v]));t.print(table(rows,4));return true}
+        if(op==='rm'){if(!S.volumes[n])return fail(t,`Error response from daemon: get ${n}: no such volume`);const u=S.containers.find(c=>c.vols.some(v=>v.name===n));if(u)return fail(t,`Error response from daemon: remove ${n}: volume is in use - [${u.id}]`);delete S.volumes[n];delete S.store['vol:'+n];t.print(n);ch();return true}
+        if(op==='inspect')return handle('docker inspect '+n,t);
+        if(op==='prune'){const un=Object.keys(S.volumes).filter(v=>!S.containers.some(c=>c.vols.some(x=>x.name===v)));un.forEach(v=>{delete S.volumes[v];delete S.store['vol:'+v]});t.print('Deleted Volumes:\n'+un.join('\n')+'\n\nTotal reclaimed space: '+(un.length*12)+'kB');ch();return true}
+        return fail(t,'Usage: docker volume create|ls|rm|inspect|prune')}
+      case 'network':{const op=args[0],n=args[1];
+        if(op==='create'){if(!n)return fail(t,'"docker network create" requires exactly 1 argument.');if(S.networks.includes(n))return fail(t,`Error response from daemon: network with name ${n} already exists`);S.networks.push(n);t.print(hex(64));ch();return true}
+        if(op==='ls'){const rows=[['NETWORK ID','NAME','DRIVER','SCOPE']];S.networks.forEach(x=>rows.push([hex(12),x,x==='host'?'host':x==='none'?'null':'bridge','local']));t.print(table(rows));return true}
+        if(op==='rm'){if(!S.networks.includes(n)||['bridge','host','none'].includes(n))return fail(t,`Error response from daemon: network ${n} not found`);const u=running().find(c=>c.net===n);if(u)return fail(t,`Error response from daemon: error while removing network: network ${n} id ${hex(12)} has active endpoints`);S.networks=S.networks.filter(x=>x!==n);t.print(n);ch();return true}
+        if(op==='inspect'){if(!S.networks.includes(n))return fail(t,`Error: No such network: ${n}`);t.print(JSON.stringify([{Name:n,Driver:'bridge',Containers:Object.fromEntries(running().filter(c=>c.net===n).map(c=>[c.id.slice(0,12),{Name:c.name,IPv4Address:c.ip+'/16'}]))}],null,2));if(n!=='bridge')t.print('(on a user-defined network, containers reach each other by name — e.g. the api reaches "redis" via DNS)','dim');return true}
+        return fail(t,'Usage: docker network create|ls|rm|inspect')}
+      case 'compose':return compose(args,t);
+      case 'system':{if(args[0]==='df'){const rows=[['TYPE','TOTAL','ACTIVE','SIZE','RECLAIMABLE']];rows.push(['Images',Object.keys(S.images).length,new Set(S.containers.map(c=>c.image)).size,'—','—'],['Containers',S.containers.length,running().length,'—','—'],['Local Volumes',Object.keys(S.volumes).length,'—','—','—']);t.print(table(rows));return true}
+        if(args[0]==='prune'){t.print('WARNING! This will remove:\n  - all stopped containers\n  - all networks not used by at least one container\n  - all dangling images\n  - unused build cache\n\nAre you sure you want to continue? [y/N] y   (playground answered yes)');
+          const gone=S.containers.filter(c=>c.status!=='running');S.containers=S.containers.filter(c=>c.status==='running');
+          const nets=S.networks.filter(n=>!['bridge','host','none'].includes(n)&&!S.containers.some(c=>c.net===n));S.networks=S.networks.filter(n=>!nets.includes(n));
+          const dang=Object.keys(S.images).filter(k=>k.startsWith('<none>'));dang.forEach(k=>delete S.images[k]);S.cache.clear();
+          t.print((gone.length?'Deleted Containers:\n'+gone.map(c=>c.id).join('\n')+'\n\n':'')+(nets.length?'Deleted Networks:\n'+nets.join('\n')+'\n\n':'')+`Total reclaimed space: ${(gone.length*1.2+dang.length*248+12).toFixed(1)}MB`);ch();return true}
+        return fail(t,'Usage: docker system df|prune')}
+    }
+    return fail(t,`docker: '${sub}' is not a docker command.\nSee 'docker --help'`)}
+
+  function render(el){const im=Object.values(S.images),cs=S.containers;
+    const chip=(cls,main,sub)=>`<span class="vc ${cls}">${esc(main)}${sub?`<span class="sub">${esc(sub)}</span>`:''}</span>`;
+    const userNets=S.networks.filter(n=>!['host','none'].includes(n));
+    el.innerHTML=`<div class="dviz">
+      <div class="vbox"><div class="vh">🖥️ Your machine · Docker Engine <small>${cs.filter(c=>c.status==='running').length} running</small></div>
+        <div class="vsec"><b>Images</b><div class="vchips">${im.length?im.map(i=>chip('img',short(i.ref),i.size)).join(''):'<span class="empty">no images yet</span>'}</div></div>
+        <div class="vsec"><b>Containers</b><div class="vchips">${cs.length?cs.map(c=>chip(c.status==='running'?'run':'stop',c.name,`${short(c.image)}${c.status==='running'&&c.ports.length?' · :'+c.ports.map(p=>p.h+'→'+p.c).join(','):''}${c.status!=='running'?' · '+(c.status==='created'?'created':'exited'):''}${c.vols.length?' · 💾'+c.vols.map(v=>v.name).join(','):''}`)).join(''):'<span class="empty">no containers</span>'}</div></div>
+        <div class="vsec"><b>Volumes &amp; networks</b><div class="vchips">${Object.keys(S.volumes).map(v=>chip('vol','💾 '+v)).join('')}${userNets.map(n=>chip('net','🔗 '+n,running().filter(c=>c.net===n).map(c=>c.name).join(', ')||'')).join('')}</div></div>
+      </div>
+      <div class="vbox reg"><div class="vh">🏬 Docker Hub <small>${S.loggedIn?'logged in as ketan':'not logged in'}</small></div>
+        <div class="vsec"><b>Your pushed images</b><div class="vchips">${Object.keys(HUB).length?Object.keys(HUB).map(r=>chip('img',short(r))).join(''):'<span class="empty">nothing pushed yet</span>'}</div></div>
+        <div class="vsec"><b>Official images</b><div class="vchips">${['nginx','redis','python','alpine','ubuntu','postgres'].map(x=>chip('',x)).join('')}</div></div>
+      </div></div>`}
+  return sim;
+}
+
+/* ============ Kubernetes simulator ============ */
+function createK8sSim(){
+  const IP='192.168.49.2';const NODE_IPS=['192.168.49.2','192.168.49.3','192.168.49.4'];
+  const VALID=new Set(['nginx:latest','nginx:1.25','nginx:1.26','nginx:1.27','redis:7','redis:latest','httpd:latest','ketan/iris-api:1.0','ketan/iris-api:1.1']);
+  const PAL=['#326ce5','#0d9488','#c2410c','#7c3aed','#be185d','#4d7c0f','#0369a1'];
+  let S,gen=0,dirty=false;
+  const sim={onChange(){},reset,handle,render,firstPod};
+  const fail=(t,m)=>{t.print(m,'err');return false};
+  const mark=()=>{dirty=true};
+  const isValid=img=>VALID.has(norm(img))||!!HUB[norm(img)];
+  setInterval(()=>{if(S&&S.started)tick();if(dirty){dirty=false;sim.onChange()}},350);
+
+  function reset(sc){gen++;S={started:false,nodes:[],deps:{},pods:[],svcs:{},files:{},pf:null,rr:0,events:[],nextNP:31080,ipc:{},colors:{},sys:{proxy:[kid(5),kid(5),kid(5)],dns:kid(10)+'-'+kid(5)}};
+    (sc.files||[]).forEach(f=>S.files[f]=FILES[f]);if(sc.setup)sc.setup(api);mark()}
+  const api={start:n=>startCluster(n,true),deploy:(name,image,replicas)=>{createDep(name,image,replicas,true)},expose:(name,port,type)=>exposeDep(name,port,null,type,true)};
+  function firstPod(dep){const p=S&&S.pods.find(p=>p.dep===dep&&p.status==='Running');return p?p.name:dep+'-…'}
+  function color(img){if(!(img in S.colors))S.colors[img]=PAL[Object.keys(S.colors).length%PAL.length];return S.colors[img]}
+  function event(type,reason,obj,msg,from){S.events.push({t:Date.now(),type,reason,obj,msg,from:from||'kubelet'});if(S.events.length>60)S.events.shift()}
+  function pev(p,type,reason,msg,from){p.ev.push({t:Date.now(),type,reason,msg,from:from||'kubelet'});event(type,reason,'pod/'+p.name,msg,from)}
+
+  function startCluster(n){S.started=true;if(!S.nodes.length){const names=['minikube','minikube-m02','minikube-m03'].slice(0,n||1);S.nodes=names.map((name,i)=>({name,ready:true,cordon:false,ip:NODE_IPS[i],created:Date.now(),role:i===0?'control-plane':'<none>'}))}S.nodes.forEach(n=>n.ready=true);mark()}
+  const node=n=>S.nodes.find(x=>x.name===n);
+  const alivePods=d=>S.pods.filter(p=>p.dep===d&&p.status!=='Terminating');
+  function pickNode(){const ok=S.nodes.filter(n=>n.ready&&!n.cordon);if(!ok.length)return null;return ok.map(n=>[n,S.pods.filter(p=>p.node===n.name&&p.status!=='Terminating').length]).sort((a,b)=>a[1]-b[1])[0][0]}
+  function createPod(d,immediate){const p={name:`${d.name}-${d.rs}-${kid(5)}`,dep:d.name,rs:d.rs,image:d.image,container:d.container,node:null,status:'Pending',created:Date.now(),ip:'',restarts:0,ev:[],hits:0};S.pods.push(p);schedule(p,immediate);return p}
+  function schedule(p,immediate){const n=pickNode();if(!n){if(!p.ev.some(e=>e.reason==='FailedScheduling'))pev(p,'Warning','FailedScheduling',`0/${S.nodes.length} nodes are available: ${S.nodes.length} node(s) were unschedulable.`,'default-scheduler');mark();return}
+    p.node=n.name;const idx=S.nodes.indexOf(n);S.ipc[idx]=(S.ipc[idx]||1)+1;p.ip=`10.244.${idx}.${S.ipc[idx]}`;
+    pev(p,'Normal','Scheduled',`Successfully assigned default/${p.name} to ${n.name}`,'default-scheduler');
+    if(immediate){pev(p,'Normal','Pulled',`Container image "${p.image}" already present on machine`);pev(p,'Normal','Created',`Created container ${p.container}`);pev(p,'Normal','Started',`Started container ${p.container}`);p.status='Running';return}
+    const g=gen;setTimeout(()=>{if(g!==gen||!S.pods.includes(p)||p.status==='Terminating')return;p.status='ContainerCreating';pev(p,'Normal','Pulling',`Pulling image "${p.image}"`);mark();
+      setTimeout(()=>{if(g!==gen||!S.pods.includes(p)||p.status==='Terminating')return;
+        if(isValid(p.image)){const s=(1+Math.random()*2).toFixed(3);pev(p,'Normal','Pulled',`Successfully pulled image "${p.image}" in ${s}s`);pev(p,'Normal','Created',`Created container ${p.container}`);pev(p,'Normal','Started',`Started container ${p.container}`);p.status='Running'}
+        else{pev(p,'Warning','Failed',`Failed to pull image "${p.image}": rpc error: code = NotFound desc = failed to pull and unpack image "docker.io/${p.image.includes('/')?p.image:'library/'+p.image}": not found`);pev(p,'Warning','Failed','Error: ErrImagePull');p.status='ErrImagePull';
+          setTimeout(()=>{if(g!==gen||!S.pods.includes(p)||p.status==='Terminating')return;pev(p,'Normal','BackOff',`Back-off pulling image "${p.image}"`);pev(p,'Warning','Failed','Error: ImagePullBackOff');p.status='ImagePullBackOff';mark()},1600)}
+        mark()},1300+Math.random()*1300)},300)}
+  function terminate(p){if(p.status==='Terminating')return;p.status='Terminating';pev(p,'Normal','Killing',`Stopping container ${p.container}`);const g=gen;setTimeout(()=>{if(g!==gen)return;S.pods=S.pods.filter(x=>x!==p);mark()},1300);mark()}
+  function calc(d){const al=alivePods(d.name);const newP=al.filter(p=>p.rs===d.rs),oldP=al.filter(p=>p.rs!==d.rs);return{al,newP,oldP,readyNew:newP.filter(p=>p.status==='Running')}}
+  function tick(){
+    S.pods.filter(p=>!p.node&&p.status==='Pending').forEach(p=>schedule(p));
+    Object.values(S.deps).forEach(d=>{const{al,newP,oldP,readyNew}=calc(d);
+      if(!oldP.length){
+        if(newP.length<d.replicas){for(let i=newP.length;i<d.replicas;i++)createPod(d);mark()}
+        else if(newP.length>d.replicas){const order=newP.slice().sort((a,b)=>(a.status==='Running')-(b.status==='Running')||b.created-a.created);order.slice(0,newP.length-d.replicas).forEach(terminate)}
+      }else{
+        const notReady=newP.length-readyNew.length;
+        if(newP.length<d.replicas&&notReady===0&&al.length<d.replicas+1){createPod(d);mark()}
+        const excess=oldP.length+readyNew.length-d.replicas;
+        if(excess>0){oldP.slice().sort((a,b)=>(a.status==='Running')-(b.status==='Running')).slice(0,excess).forEach(terminate)}
+      }});
+    S.pods.filter(p=>!S.deps[p.dep]&&p.status!=='Terminating'&&p.dep!=='__').forEach(terminate);
+  }
+  function createDep(name,image,replicas,immediate,container){const img=norm(image);const rs=kid(10);const d={name,image:img,container:container||img.split(':')[0].split('/').pop(),replicas,rs,revs:[{rev:1,rs,image:img}],created:Date.now(),strategy:container?'1 max surge, 0 max unavailable':'25% max unavailable, 25% max surge'};
+    S.deps[name]=d;event('Normal','ScalingReplicaSet','deployment/'+name,`Scaled up replica set ${name}-${rs} to ${replicas}`,'deployment-controller');
+    if(immediate)for(let i=0;i<replicas;i++)createPod(d,true);mark();return d}
+  function exposeDep(name,port,target,type,quiet){const d=S.deps[name];const np=type==='NodePort'||type==='LoadBalancer'?(S.nextNP++):null;
+    S.svcs[name]={name,type:type||'ClusterIP',port:+port,target:+(target||port),nodePort:np,sel:name,clusterIP:`10.${96+(Math.random()*8|0)}.${Math.random()*255|0}.${Math.random()*254+1|0}`,created:Date.now()};mark();return S.svcs[name]}
+  function setImage(d,img){img=norm(img);if(d.image===img)return false;const prev=d.revs.find(r=>r.image===img);let rs;if(prev){rs=prev.rs;d.revs=d.revs.filter(r=>r!==prev)}else rs=kid(10);
+    const max=Math.max(...d.revs.map(r=>r.rev),0);d.revs.push({rev:max+1,rs,image:img});d.rs=rs;d.image=img;
+    event('Normal','ScalingReplicaSet','deployment/'+d.name,`Scaled up replica set ${d.name}-${rs} to 1`,'deployment-controller');mark();return true}
+
+  /* ---- printing helpers ---- */
+  function podTable(list,wide,noHeader){const w=[Math.max(28,...list.map(p=>p.name.length+3)),8,19,11,7,15];const head=['NAME','READY','STATUS','RESTARTS','AGE'].concat(wide?['IP','NODE']:[]);
+    const row=p=>{const r=[p.name,p.status==='Running'?'1/1':'0/1',p.status,String(p.restarts),kage(p.created)];if(wide)r.push(p.ip||'<none>',p.node||'<none>');return r.map((c,i)=>i===r.length-1?c:c.padEnd(w[i])).join('')};
+    return (noHeader?[]:[head.map((c,i)=>i===head.length-1?c:c.padEnd(w[i])).join('')]).concat(list.map(row)).join('\n')}
+  function sysPods(){const n=S.nodes;const rows=[['coredns-'+S.sys.dns,'1/1','Running','0',n[0]],['etcd-minikube','1/1','Running','0',n[0]],['kube-apiserver-minikube','1/1','Running','0',n[0]],['kube-controller-manager-minikube','1/1','Running','0',n[0]],['kube-scheduler-minikube','1/1','Running','0',n[0]],['storage-provisioner','1/1','Running','1',n[0]]];
+    n.forEach((x,i)=>rows.push(['kube-proxy-'+S.sys.proxy[i],x.ready?'1/1':'0/1',x.ready?'Running':'Unknown','0',x]));return rows}
+  function depRows(list){const rows=[['NAME','READY','UP-TO-DATE','AVAILABLE','AGE']];list.forEach(d=>{const{al,newP}=calc(d);const run=al.filter(p=>p.status==='Running').length;rows.push([d.name,`${run}/${d.replicas}`,String(newP.length),String(run),kage(d.created)])});return table(rows)}
+  function svcRows(list){const rows=[['NAME','TYPE','CLUSTER-IP','EXTERNAL-IP','PORT(S)','AGE'],['kubernetes','ClusterIP','10.96.0.1','<none>','443/TCP',kage(S.nodes[0]?S.nodes[0].created:Date.now())]];
+    list.forEach(s=>rows.push([s.name,s.type,s.clusterIP,s.type==='LoadBalancer'?'<pending>':'<none>',s.nodePort?`${s.port}:${s.nodePort}/TCP`:`${s.port}/TCP`,kage(s.created)]));return table(rows)}
+  function rsRows(){const rows=[['NAME','DESIRED','CURRENT','READY','AGE']];Object.values(S.deps).forEach(d=>d.revs.slice().reverse().forEach(r=>{const ps=S.pods.filter(p=>p.dep===d.name&&p.rs===r.rs&&p.status!=='Terminating');const des=r.rs===d.rs?d.replicas:ps.length;rows.push([`${d.name}-${r.rs}`,des,ps.length,ps.filter(p=>p.status==='Running').length,kage(d.created)])}));return table(rows)}
+  function nodeRows(wide){const rows=[['NAME','STATUS','ROLES','AGE','VERSION'].concat(wide?['INTERNAL-IP','OS-IMAGE','CONTAINER-RUNTIME']:[])];S.nodes.forEach(n=>{const r=[n.name,(n.ready?'Ready':'NotReady')+(n.cordon?',SchedulingDisabled':''),n.role,kage(n.created),'v1.31.0'];if(wide)r.push(n.ip,'Ubuntu 22.04.4 LTS','docker://27.2.0');rows.push(r)});return table(rows)}
+  function endpoints(s){return S.pods.filter(p=>p.dep===s.sel&&p.status==='Running'&&node(p.node)&&node(p.node).ready)}
+  function resolvePod(ref){if(!ref)return null;const m=/^(deploy|deployment|deployments)\/(.+)$/.exec(ref);if(m)return S.pods.find(p=>p.dep===m[2]&&p.status==='Running')||S.pods.find(p=>p.dep===m[2])||null;const n=ref.replace(/^pods?\//,'');return S.pods.find(p=>p.name===n)||null}
+  function resType(x){x=(x||'').toLowerCase();if(['pods','pod','po'].includes(x))return'pods';if(['deployments','deployment','deploy'].includes(x))return'deployments';if(['services','service','svc'].includes(x))return'services';if(['nodes','node','no'].includes(x))return'nodes';if(['replicasets','replicaset','rs'].includes(x))return'rs';if(x==='all')return'all';if(['events','event','ev'].includes(x))return'events';if(['namespaces','namespace','ns'].includes(x))return'ns';return null}
+  function splitTN(pos){let[type,name]=pos;if(type&&type.includes('/')){[type,name]=type.split('/')}return[resType(type),name,type]}
+  const curlBody=(p,path)=>{const k=KIND(p.image);if(k==='web')return `<!DOCTYPE html>\n<html><head><title>Welcome to nginx!</title></head>\n<body><h1>Welcome to nginx!</h1></body></html>`;
+    if(k==='api'){if(path.startsWith('/health'))return '{"status":"ok"}';if(path.startsWith('/predict'))return `{"prediction":"setosa","model_version":"${splitRef(p.image)[1]}","pod":"${p.name}"}`;return '{"message":"Iris model API. Try /predict or /health"}'}return 'OK'};
+
+  function rolloutWatch(d,t){const g=gen;let last='';const t0=Date.now();const n=d.name;
+    const step=()=>{if(g!==gen)return;const dd=S.deps[n];if(!dd)return;const{newP,oldP,readyNew}=calc(dd);
+      if(!oldP.length&&readyNew.length>=dd.replicas&&newP.length===dd.replicas){t.print(`deployment "${n}" successfully rolled out`,'ok');return}
+      let msg;if(newP.length<dd.replicas)msg=`Waiting for deployment "${n}" rollout to finish: ${newP.length} out of ${dd.replicas} new replicas have been updated...`;
+      else if(oldP.length)msg=`Waiting for deployment "${n}" rollout to finish: ${oldP.length} old replicas are pending termination...`;
+      else msg=`Waiting for deployment "${n}" rollout to finish: ${readyNew.length} of ${dd.replicas} updated replicas are available...`;
+      if(msg!==last){t.print(msg);last=msg}
+      if(Date.now()-t0>9000){t.print(`error: deployment "${n}" exceeded its progress deadline`,'err');t.print('(playground: compressed to 9 s; the default progressDeadlineSeconds is 600. Check kubectl get pods / describe pod.)','dim');return}
+      setTimeout(step,450)};step()}
+  function watchPods(t,list){const g=gen;const seen=new Map(S.pods.map(p=>[p.name,p.status]));const t0=Date.now();
+    const iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return}if(Date.now()-t0>9000){clearInterval(iv);t.print('^C   (playground: watch stops after 9 s)','dim');return}
+      S.pods.forEach(p=>{if(seen.get(p.name)!==p.status){seen.set(p.name,p.status);t.print(podTable([p],false,true))}})},300)}
+
+  function kubectl(a,t){const {pos,f,rest}=parseArgs(a,['o','output','l','selector','image','replicas','port','type','target-port','to-revision','n','namespace','f','filename','c','container','name']);
+    const verb=pos[0];const out=f.o||f.output;const wide=out==='wide';
+    if(verb==='version'){t.print('Client Version: v1.31.0\nKustomize Version: v5.4.2'+(S.started?'\nServer Version: v1.31.0':''));return true}
+    if(!verb||verb==='help'||f.help)return handle('help',t);
+    if(!S.started)return fail(t,`E1114 10:15:02.118274   memcache.go:265] couldn't get current server API group list: Get "https://127.0.0.1:32771/api?timeout=32s": dial tcp 127.0.0.1:32771: connect: connection refused\nThe connection to the server 127.0.0.1:32771 was refused - did you specify the right host or port?\n(hint: start the cluster first — minikube start --nodes=3)`);
+    const ns=f.n||f.namespace;const allNs=f.A||f['all-namespaces'];
+    switch(verb){
+      case 'cluster-info':t.print(`Kubernetes control plane is running at https://${IP}:8443\nCoreDNS is running at https://${IP}:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy`);return true;
+      case 'get':{const[type,name,rawType]=splitTN(pos.slice(1));if(!type)return fail(t,`error: the server doesn't have a resource type "${rawType||''}"`);
+        if(type==='pods'){if(ns==='kube-system'||allNs){const rows=[(allNs?['NAMESPACE']:[]).concat(['NAME','READY','STATUS','RESTARTS','AGE'])];sysPods().forEach(r=>rows.push((allNs?['kube-system']:[]).concat([r[0],r[1],r[2],r[3],kage(S.nodes[0].created)])));if(allNs)S.pods.forEach(p=>rows.push(['default',p.name,p.status==='Running'?'1/1':'0/1',p.status,String(p.restarts),kage(p.created)]));t.print(table(rows));if(!allNs)t.print('(these are Kubernetes\' own components — they run as pods too)','dim');return true}
+          let list=S.pods;if(name)list=list.filter(p=>p.name===name);const sel=f.l||f.selector;if(sel){const v=sel.split('=')[1];list=list.filter(p=>p.dep===v)}
+          if(name&&!list.length)return fail(t,`Error from server (NotFound): pods "${name}" not found`);
+          if(!list.length){t.print('No resources found in default namespace.');return true}
+          t.print(podTable(list,wide));if(f.w||f.watch)watchPods(t);return true}
+        if(type==='deployments'){let list=Object.values(S.deps);if(name){list=list.filter(d=>d.name===name);if(!list.length)return fail(t,`Error from server (NotFound): deployments.apps "${name}" not found`)}if(!list.length){t.print('No resources found in default namespace.');return true}t.print(depRows(list));return true}
+        if(type==='services'){let list=Object.values(S.svcs);if(name){list=list.filter(s=>s.name===name);if(!list.length)return fail(t,`Error from server (NotFound): services "${name}" not found`)}t.print(svcRows(list));return true}
+        if(type==='nodes'){t.print(nodeRows(wide));return true}
+        if(type==='rs'){if(!Object.keys(S.deps).length){t.print('No resources found in default namespace.');return true}t.print(rsRows());return true}
+        if(type==='ns'){t.print(table([['NAME','STATUS','AGE'],['default','Active',kage(S.nodes[0].created)],['kube-node-lease','Active',kage(S.nodes[0].created)],['kube-public','Active',kage(S.nodes[0].created)],['kube-system','Active',kage(S.nodes[0].created)]]));return true}
+        if(type==='events'){const rows=[['LAST SEEN','TYPE','REASON','OBJECT','MESSAGE']];S.events.slice(-18).forEach(e=>rows.push([kage(e.t),e.type,e.reason,e.obj,e.msg]));if(rows.length===1){t.print('No resources found in default namespace.');return true}t.print(table(rows));return true}
+        if(type==='all'){const parts=[];if(S.pods.length)parts.push(podTable(S.pods).split('\n').map((l,i)=>i?'pod/'+l:'NAME'+l.slice(4).replace(/^/,'    ')).join('\n'));
+          parts.push(svcRows(Object.values(S.svcs)).split('\n').map((l,i)=>i?'service/'+l:'NAME'+'        '+l.slice(4)).join('\n'));
+          if(Object.keys(S.deps).length){parts.push(depRows(Object.values(S.deps)).split('\n').map((l,i)=>i?'deployment.apps/'+l:'NAME                '+l.slice(4)).join('\n'));parts.push(rsRows().split('\n').map((l,i)=>i?'replicaset.apps/'+l:'NAME                '+l.slice(4)).join('\n'))}
+          t.print(parts.join('\n\n'));return true}
+        return fail(t,'unsupported resource')}
+      case 'describe':{const[type,name]=splitTN(pos.slice(1));
+        if(type==='pods'){const p=resolvePod(name);if(!p)return fail(t,`Error from server (NotFound): pods "${name||''}" not found`);
+          const ev=p.ev.slice(-9);t.print(`Name:             ${p.name}\nNamespace:        default\nNode:             ${p.node?p.node+'/'+node(p.node).ip:'<none>'}\nStart Time:       ${new Date(p.created).toUTCString()}\nLabels:           app=${p.dep}\n                  pod-template-hash=${p.rs}\nStatus:           ${p.status==='Running'?'Running':p.status==='Terminating'?'Terminating':'Pending'}\nIP:               ${p.ip||''}\nControlled By:    ReplicaSet/${p.dep}-${p.rs}\nContainers:\n  ${p.container}:\n    Image:          ${p.image}\n    State:          ${p.status==='Running'?'Running':'Waiting'}${p.status!=='Running'&&p.status!=='Terminating'?'\n      Reason:       '+p.status:''}\n    Ready:          ${p.status==='Running'?'True':'False'}\n    Restart Count:  ${p.restarts}\nEvents:\n  Type     Reason     Age   From               Message\n  ----     ------     ----  ----               -------\n`+ev.map(e=>`  ${e.type.padEnd(9)}${e.reason.padEnd(11)}${kage(e.t).padEnd(6)}${e.from.padEnd(19)}${e.msg}`).join('\n'));return true}
+        if(type==='deployments'){const d=S.deps[name];if(!d)return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);const{al,newP}=calc(d);const run=al.filter(p=>p.status==='Running').length;const old=d.revs.filter(r=>r.rs!==d.rs&&S.pods.some(p=>p.rs===r.rs&&p.dep===d.name));
+          t.print(`Name:                   ${d.name}\nNamespace:              default\nSelector:               app=${d.name}\nReplicas:               ${d.replicas} desired | ${newP.length} updated | ${al.length} total | ${run} available | ${al.length-run} unavailable\nStrategyType:           RollingUpdate\nRollingUpdateStrategy:  ${d.strategy}\nPod Template:\n  Labels:  app=${d.name}\n  Containers:\n   ${d.container}:\n    Image:   ${d.image}\nOldReplicaSets:  ${old.length?old.map(r=>`${d.name}-${r.rs}`).join(', '):'<none>'}\nNewReplicaSet:   ${d.name}-${d.rs} (${newP.length}/${d.replicas} replicas created)\nEvents:\n`+S.events.filter(e=>e.obj==='deployment/'+d.name).slice(-6).map(e=>`  Normal  ScalingReplicaSet  ${kage(e.t).padEnd(5)} deployment-controller  ${e.msg}`).join('\n'));return true}
+        if(type==='services'){const s=S.svcs[name];if(!s)return fail(t,`Error from server (NotFound): services "${name||''}" not found`);const eps=endpoints(s);
+          t.print(`Name:                     ${s.name}\nNamespace:                default\nSelector:                 app=${s.sel}\nType:                     ${s.type}\nIP:                       ${s.clusterIP}\nPort:                     <unset>  ${s.port}/TCP\nTargetPort:               ${s.target}/TCP${s.nodePort?`\nNodePort:                 <unset>  ${s.nodePort}/TCP`:''}\nEndpoints:                ${eps.length?eps.map(p=>p.ip+':'+s.target).join(','):'<none>'}`);
+          t.print('(Endpoints = the pod IPs the Service currently load-balances to. They change as pods come and go.)','dim');return true}
+        if(type==='nodes'){const n=node(name);if(!n)return fail(t,`Error from server (NotFound): nodes "${name||''}" not found`);const ps=S.pods.filter(p=>p.node===n.name&&p.status!=='Terminating');t.print(`Name:               ${n.name}\nRoles:              ${n.role}\nUnschedulable:      ${n.cordon}\nConditions:\n  Ready             ${n.ready?'True':'Unknown'}\nAddresses:\n  InternalIP:  ${n.ip}\nCapacity:\n  cpu:     2\n  memory:  2199Mi\n  pods:    110\nNon-terminated Pods:  (${ps.length} in default)\n`+ps.map(p=>`  default  ${p.name}`).join('\n'));return true}
+        return fail(t,'error: you must specify the type of resource to describe, e.g. kubectl describe pod NAME')}
+      case 'create':{if(pos[1]!=='deployment'&&pos[1]!=='deploy')return fail(t,`error: unknown or unsupported in this playground: kubectl create ${pos[1]||''}\nTry: kubectl create deployment NAME --image=IMAGE`);const name=pos[2];
+        if(!name)return fail(t,'error: exactly one NAME is required, got 0');if(!f.image||f.image===true)return fail(t,'error: required flag(s) "image" not set');
+        if(S.deps[name])return fail(t,`error: failed to create deployment: deployments.apps "${name}" already exists`);
+        createDep(name,f.image,+(f.replicas||1));t.print(`deployment.apps/${name} created`);return true}
+      case 'apply':case 'delete':{if(verb==='delete'&&!(f.f||f.filename)){return del(pos.slice(1),f,t)}
+        const file=f.f||f.filename;if(!file||file===true)return fail(t,'error: must specify one of -f and -k');if(!(file in S.files))return fail(t,`error: the path "${file}" does not exist`);
+        if(file==='deployment.yaml'){if(verb==='delete'){if(!S.deps['model-api'])return fail(t,'Error from server (NotFound): error when deleting "deployment.yaml": deployments.apps "model-api" not found');delete S.deps['model-api'];t.print('deployment.apps "model-api" deleted');mark();return true}
+          const d=S.deps['model-api'];if(!d){createDep('model-api','ketan/iris-api:1.0',3,false,'model-api');t.print('deployment.apps/model-api created');return true}
+          let changed=false;if(d.replicas!==3){d.replicas=3;changed=true}if(setImage(d,'ketan/iris-api:1.0'))changed=true;t.print(`deployment.apps/model-api ${changed?'configured':'unchanged'}`);if(changed)t.print('(the file is the source of truth: apply put the deployment back to what the YAML says)','dim');return true}
+        if(file==='service.yaml'){if(verb==='delete'){if(!S.svcs['model-api-svc'])return fail(t,'Error from server (NotFound): services "model-api-svc" not found');delete S.svcs['model-api-svc'];t.print('service "model-api-svc" deleted');mark();return true}
+          if(S.svcs['model-api-svc']){t.print('service/model-api-svc unchanged');return true}const s=exposeDep('model-api',80,8000,'NodePort');s.name='model-api-svc';s.nodePort=30080;S.nextNP--;delete S.svcs['model-api'];S.svcs['model-api-svc']=s;t.print('service/model-api-svc created');return true}
+        return fail(t,`error: no objects passed to ${verb}`)}
+      case 'expose':{const[type,name]=splitTN(pos.slice(1));if(type!=='deployments')return fail(t,'error: in this playground, expose a deployment: kubectl expose deployment NAME --port=80 --type=NodePort');
+        if(!S.deps[name])return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);if(!f.port||f.port===true)return fail(t,`error: couldn't find port via --port flag or introspection\nSee 'kubectl expose -h' for help and examples`);
+        if(S.svcs[name])return fail(t,`Error from server (AlreadyExists): services "${name}" already exists`);const type2=f.type||'ClusterIP';if(!['ClusterIP','NodePort','LoadBalancer'].includes(type2))return fail(t,`error: invalid service type "${type2}"`);
+        exposeDep(name,f.port,f['target-port'],type2);t.print(`service/${name} exposed`);if(type2==='ClusterIP')t.print('(ClusterIP is only reachable inside the cluster. Use --type=NodePort to reach it from your machine.)','dim');if(type2==='LoadBalancer')t.print('(on minikube, EXTERNAL-IP stays <pending> unless you run minikube tunnel; the NodePort still works)','dim');return true}
+      case 'scale':{const[type,name]=splitTN(pos.slice(1));const d=S.deps[name];if(type!=='deployments'||!d)return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);
+        if(f.replicas===undefined||f.replicas===true||isNaN(+f.replicas))return fail(t,'error: required flag(s) "replicas" not set');const r=+f.replicas;
+        event('Normal','ScalingReplicaSet','deployment/'+d.name,`Scaled ${r>d.replicas?'up':'down'} replica set ${d.name}-${d.rs} to ${r}`,'deployment-controller');d.replicas=r;mark();t.print(`deployment.apps/${name} scaled`);return true}
+      case 'set':{if(pos[1]!=='image')return fail(t,'error: only "kubectl set image" is simulated here');const[type,name]=splitTN(pos.slice(2));const d=S.deps[name];if(type!=='deployments'||!d)return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);
+        const pair=pos.slice(2).find(x=>x.includes('=')&&!x.startsWith('deploy'))||pos[4];if(!pair||!pair.includes('='))return fail(t,'error: expected CONTAINER=IMAGE, e.g. kubectl set image deployment/web nginx=nginx:1.27');
+        const[cn,img]=pair.split('=');if(cn!==d.container&&cn!=='*')return fail(t,`error: unable to find container named "${cn}"\n(hint: this deployment's container is called "${d.container}")`);
+        setImage(d,img);t.print(`deployment.apps/${name} image updated`);return true}
+      case 'rollout':{const sub=pos[1];const[type,name]=splitTN(pos.slice(2));const d=S.deps[name];if(type!=='deployments'||!d)return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);
+        if(sub==='status'){rolloutWatch(d,t);return true}
+        if(sub==='history'){t.print(`deployment.apps/${name} \n`+table([['REVISION','CHANGE-CAUSE']].concat(d.revs.map(r=>[String(r.rev),'<none>']))));t.print('(playground note — images per revision: '+d.revs.map(r=>`rev ${r.rev} = ${r.image}`).join(', ')+')','dim');return true}
+        if(sub==='undo'){if(d.revs.length<2)return fail(t,`error: no rollout history found for deployment "${name}"`);let target=d.revs[d.revs.length-2];if(f['to-revision']){target=d.revs.find(r=>r.rev===+f['to-revision']);if(!target)return fail(t,`error: unable to find specified revision ${f['to-revision']} in history`)}
+          setImage(d,target.image);t.print(`deployment.apps/${name} rolled back`);return true}
+        if(sub==='restart'){const img=d.image;const rs=kid(10);const max=Math.max(...d.revs.map(r=>r.rev));d.revs.push({rev:max+1,rs,image:img});d.rs=rs;mark();t.print(`deployment.apps/${name} restarted`);return true}
+        return fail(t,'error: use kubectl rollout status|history|undo|restart deployment/NAME')}
+      case 'logs':{const ref=pos[1];const p=resolvePod(ref);if(!p)return fail(t,`error: error from server (NotFound): pods "${ref||''}" not found in namespace "default"`);
+        if(p.status!=='Running')return fail(t,`Error from server (BadRequest): container "${p.container}" in pod "${p.name}" is waiting to start: ${p.status==='ContainerCreating'||p.status==='Pending'?'ContainerCreating':'trying and failing to pull image'}`);
+        const k=KIND(p.image);if(String(ref).includes('/'))t.print(`Found ${S.pods.filter(x=>x.dep===p.dep).length} pods, using pod/${p.name}`,'dim');
+        t.print(k==='web'?`/docker-entrypoint.sh: Configuration complete; ready for start up\n${nginxTime()} [notice] 1#1: nginx/1.27.2\n${nginxTime()} [notice] 1#1: start worker processes`+('\n10.244.0.1 - - ['+clfTime()+'] "GET / HTTP/1.1" 200 615 "-" "curl/8.5.0"').repeat(p.hits):k==='api'?`INFO:     Started server process [1]\nModel loaded: iris (version ${splitRef(p.image)[1]})\nINFO:     Uvicorn running on http://0.0.0.0:8000`+('\nINFO:     10.244.0.1:52144 - "GET /predict HTTP/1.1" 200 OK').repeat(p.hits):'Ready to accept connections');return true}
+      case 'exec':{const ref=pos[1];const p=resolvePod(ref);if(!p)return fail(t,`Error from server (NotFound): pods "${ref||''}" not found`);if(p.status!=='Running')return fail(t,`error: unable to upgrade connection: container not found ("${p.container}")`);
+        const cmd=(rest||[]).join(' ');if(!cmd)return fail(t,'error: you must specify at least one command for the container\n(e.g. kubectl exec -it POD -- sh)');
+        const c={id:p.name,host:p.name,kind:KIND(p.image),image:p.image,vols:[],env:['KUBERNETES_SERVICE_HOST=10.96.0.1','KUBERNETES_SERVICE_PORT=443'].concat(Object.values(S.svcs).map(s=>`${s.name.toUpperCase().replace(/-/g,'_')}_SERVICE_HOST=${s.clusterIP}`))};
+        if(/^(ba)?sh$|^\/bin\/(ba)?sh$/.test(cmd)){if(!(f.it||f.ti||(f.i&&f.t)))return true;t.print(`(inside pod ${p.name} on ${p.node} — type exit to leave)`,'dim');enterShell(t,c,null,null);return true}
+        const o=shellExec(c,cmd,null);if(o===null)return fail(t,`error: Internal error occurred: exec: "${tokenize(cmd)[0]}": executable file not found in $PATH`);if(o)t.print(o);return true}
+      case 'port-forward':{const ref=pos[1]||'';const m=/^(svc|service)\/(.+)$/.exec(ref);const pm=/^(\d+):(\d+)$/.exec(pos[2]||'');if(!m||!pm)return fail(t,'error: usage: kubectl port-forward svc/NAME LOCAL:REMOTE  (e.g. 8080:80)');const s=S.svcs[m[2]];if(!s)return fail(t,`Error from server (NotFound): services "${m[2]}" not found`);
+        S.pf={local:+pm[1],svc:s.name};t.print(`Forwarding from 127.0.0.1:${pm[1]} -> ${s.target}\nForwarding from [::1]:${pm[1]} -> ${s.target}`);t.print('(playground: keeps forwarding in the background — now try curl localhost:'+pm[1]+')','dim');return true}
+      case 'cordon':case 'uncordon':{const n=node(pos[1]);if(!n)return fail(t,`Error from server (NotFound): nodes "${pos[1]||''}" not found`);n.cordon=verb==='cordon';t.print(`node/${n.name} ${verb}ed`);if(verb==='uncordon')t.print('(existing pods do NOT move back automatically — only new pods can land here now)','dim');mark();return true}
+      case 'drain':{const n=node(pos[1]);if(!n)return fail(t,`Error from server (NotFound): nodes "${pos[1]||''}" not found`);n.cordon=true;t.print(`node/${n.name} cordoned`);
+        if(!f['ignore-daemonsets'])return fail(t,`error: unable to drain node "${n.name}" due to error: cannot delete DaemonSet-managed Pods (use --ignore-daemonsets to ignore): kube-system/kube-proxy-${S.sys.proxy[S.nodes.indexOf(n)]}, continuing command...\nThere are pending nodes to be drained:\n ${n.name}`);
+        if(f['ignore-daemonsets'])t.print(`Warning: ignoring DaemonSet-managed Pods: kube-system/kube-proxy-${S.sys.proxy[S.nodes.indexOf(n)]}`);
+        const ps=S.pods.filter(p=>p.node===n.name&&p.status!=='Terminating');ps.forEach(p=>t.print(`evicting pod default/${p.name}`));ps.forEach(p=>{terminate(p);t.print(`pod/${p.name} evicted`)});t.print(`node/${n.name} drained`);mark();return true}
+      case 'top':return fail(t,'error: Metrics API not available\n(hint: on minikube run: minikube addons enable metrics-server)');
+      case 'config':t.print('minikube');return true;
+    }
+    return fail(t,`error: unknown command "${verb}" for "kubectl"\nRun 'kubectl --help' for usage.`)}
+
+  function del(pos,f,t){const[type,name]=splitTN(pos);
+    if(type==='pods'){if(f.all){const ps=S.pods.filter(p=>p.status!=='Terminating');ps.forEach(p=>{terminate(p);t.print(`pod "${p.name}" deleted`)});return true}
+      const p=S.pods.find(p=>p.name===name);if(!p)return fail(t,`Error from server (NotFound): pods "${name||''}" not found`);terminate(p);t.print(`pod "${p.name}" deleted`);return true}
+    if(type==='deployments'){if(!S.deps[name])return fail(t,`Error from server (NotFound): deployments.apps "${name||''}" not found`);delete S.deps[name];S.pods.filter(p=>p.dep===name).forEach(terminate);t.print(`deployment.apps "${name}" deleted`);return true}
+    if(type==='services'){if(!S.svcs[name])return fail(t,`Error from server (NotFound): services "${name||''}" not found`);delete S.svcs[name];t.print(`service "${name}" deleted`);mark();return true}
+    if(type==='nodes')return fail(t,'(playground: deleting nodes is not simulated — try kubectl drain, or the "node crash" button)');
+    return fail(t,'error: resource(s) were provided, but no name was specified')}
+
+  function minikube(a,t){const {pos,f}=parseArgs(a,['nodes','n','p','driver']);const sub=pos[0];
+    switch(sub){
+      case 'start':{const n=Math.min(3,Math.max(1,+(f.nodes||f.n||1)));if(S.started){t.print('🏃  Updating the running docker "minikube" container ...\n🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default');return true}
+        const was=S.nodes.length;const lines=['😄  minikube v1.34.0 on Ubuntu 24.04','✨  Using the docker driver based on '+(was?'existing profile':'user configuration'),'👍  Starting "minikube" primary control-plane node in "minikube" cluster','🔥  Creating docker container (CPUs=2, Memory=2200MB) ...','🐳  Preparing Kubernetes v1.31.0 on Docker 27.2.0 ...','    ▪ Generating certificates and keys ...','    ▪ Booting up control plane ...','    ▪ Configuring RBAC rules ...','🔗  Configuring CNI (Container Networking Interface) ...','🔎  Verifying Kubernetes components...'];
+        for(let i=1;i<(was||n);i++)lines.push(`👍  Starting "minikube-m0${i+1}" worker node in "minikube" cluster`,'🔥  Creating docker container (CPUs=2, Memory=2200MB) ...',`    ▪ env NO_PROXY=192.168.49.2`);
+        lines.push('🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default');t.print(lines.join('\n'));
+        t.print(`(fun fact: with the docker driver each Kubernetes "node" is itself a Docker container — containers running containers.)`,'dim');startCluster(n);return true}
+      case 'status':if(!S.started){t.print('minikube\ntype: Control Plane\nhost: Stopped\nkubelet: Stopped\napiserver: Stopped\nkubeconfig: Stopped');return true}
+        t.print(S.nodes.map((n,i)=>i===0?`${n.name}\ntype: Control Plane\nhost: Running\nkubelet: Running\napiserver: Running\nkubeconfig: Configured`:`${n.name}\ntype: Worker\nhost: ${n.ready?'Running':'Stopped'}\nkubelet: ${n.ready?'Running':'Stopped'}`).join('\n\n'));return true;
+      case 'stop':if(!S.started)return fail(t,'✋  Profile "minikube" is not running');S.started=false;t.print('✋  Stopping node "minikube" ...\n🛑  Powering off "minikube" via SSH ...\n🛑  1 node stopped.');mark();return true;
+      case 'ip':t.print(IP);return true;
+      case 'service':{const name=pos[1];if(!S.started)return fail(t,'🤷  The control-plane node minikube host is not running');const s=S.svcs[name];if(!s)return fail(t,`❌  Exiting due to SVC_NOT_FOUND: Service '${name||''}' was not found in 'default' namespace.`);
+        if(!s.nodePort)return fail(t,`😿  service default/${name} has no node port\n❗  Services [default/${name}] have type "ClusterIP" not meant to be exposed`);
+        if(f.url){t.print(`http://${IP}:${s.nodePort}`);return true}t.print(table([['NAMESPACE','NAME','TARGET PORT','URL'],['default',name,String(s.port),`http://${IP}:${s.nodePort}`]]));t.print('🎉  Opening service default/'+name+' in default browser...\n(playground: no browser here — use the URL with curl, or add --url)','dim');return true}
+      case 'dashboard':t.print('(the Kubernetes Dashboard opens a browser UI — not available in this playground)','dim');return true;
+      case 'addons':t.print('(addons are not simulated here; on a real minikube try: minikube addons enable metrics-server)','dim');return true;
+      case 'delete':S.started=false;S.nodes=[];S.deps={};S.pods=[];S.svcs={};t.print('🔥  Deleting "minikube" in docker ...\n💀  Removed all traces of the "minikube" cluster.');mark();return true;
+    }
+    return fail(t,`Error: unknown command "${sub||''}" for "minikube"\nTry: minikube start | status | service NAME --url | ip | stop | delete`)}
+
+  function curl(a,t){const url=a.find(x=>/^https?:\/\/|^\d+\.\d+\.\d+\.\d+|^localhost/.test(x));if(!url)return fail(t,'curl: (3) URL rejected: No host part in the URL\n(try curl http://192.168.49.2:NODEPORT, or curl $(minikube service NAME --url))');
+    const m=/^(?:https?:\/\/)?([^:/]+)(?::(\d+))?(\/\S*)?$/.exec(url);if(!m)return fail(t,'curl: (3) URL rejected');const host=m[1],port=+(m[2]||80),path=m[3]||'/';let s=null;
+    if(host==='localhost'||host==='127.0.0.1'){if(S.pf&&S.pf.local===port)s=S.svcs[S.pf.svc];if(!s)return fail(t,`curl: (7) Failed to connect to localhost port ${port}: Connection refused\n(nothing is listening locally — try kubectl port-forward svc/NAME ${port}:80)`)}
+    else if(NODE_IPS.includes(host)){if(!S.started)return fail(t,`curl: (7) Failed to connect to ${host} port ${port}: No route to host`);const nd=S.nodes.find(n=>n.ip===host);if(!nd||!nd.ready)return fail(t,`curl: (28) Failed to connect to ${host} port ${port} after 5000 ms: Timeout was reached (that node is down — try another node IP)`);
+      s=Object.values(S.svcs).find(x=>x.nodePort===port);if(!s)return fail(t,`curl: (7) Failed to connect to ${host} port ${port} after 0 ms: Couldn't connect to server`+(Object.values(S.svcs).length?`\n(no NodePort service on ${port}; check kubectl get svc)`:'\n(no service exposes this port yet — kubectl expose …)'))}
+    else{const cs=Object.values(S.svcs).find(x=>x.clusterIP===host);if(cs)return fail(t,`curl: (28) Failed to connect to ${host} port ${port} after 5001 ms: Timeout was reached\n(${host} is a ClusterIP — only reachable from inside the cluster. Try kubectl exec, a NodePort, or port-forward.)`);return fail(t,`curl: (6) Could not resolve host: ${host}`)}
+    const eps=endpoints(s);if(!eps.length)return fail(t,`curl: (7) Failed to connect to ${host} port ${port}: Connection refused\n(the Service exists but has no ready pods behind it: kubectl get pods)`);
+    const p=eps[S.rr++%eps.length];p.hits++;t.print(curlBody(p,path));t.print(`↳ answered by pod ${p.name} on ${p.node}  (the Service spread this request across ${eps.length} ready pod${eps.length>1?'s':''})`,'dim');mark();return true}
+
+  function handle(raw,t){let cmd=raw.replace(/\$\(minikube ip\)/g,IP).replace(/\$\(minikube service (\S+) --url\)/g,(m0,n)=>{const s=S.svcs[n];return s&&s.nodePort&&S.started?`http://${IP}:${s.nodePort}`:''});
+    const a=tokenize(cmd);const c0=a[0];
+    if(c0==='clear'){t.clear();return true}
+    if(c0==='help'){t.print(`Simulated commands in this lab:
+  minikube start [--nodes=3] | status | ip | service NAME [--url] | stop | delete
+  kubectl get pods|deploy|svc|nodes|rs|events|all [-o wide] [-w] [-n kube-system]
+  kubectl describe pod|deployment|svc|node NAME
+  kubectl create deployment NAME --image=IMAGE [--replicas=N]
+  kubectl apply -f FILE        kubectl delete -f FILE | pod NAME | pod --all | deployment NAME | svc NAME
+  kubectl expose deployment NAME --port=80 [--target-port=8000] --type=NodePort|ClusterIP|LoadBalancer
+  kubectl scale deployment NAME --replicas=N
+  kubectl set image deployment/NAME CONTAINER=IMAGE
+  kubectl rollout status|history|undo|restart deployment/NAME
+  kubectl logs POD|deployment/NAME     kubectl exec -it POD -- sh
+  kubectl port-forward svc/NAME 8080:80     kubectl cordon|uncordon|drain NODE
+  curl http://192.168.49.2:NODEPORT[/path]   curl $(minikube service NAME --url)
+  ls   cat FILE   clear
+Valid images: nginx:1.25, nginx:1.27, redis:7, ketan/iris-api:1.0, ketan/iris-api:1.1 (+ anything you pushed in the Docker lab)`);return true}
+    if(c0==='ls'){const f=Object.keys(S.files);if(f.length)t.print(f.join('  '));return true}
+    if(c0==='cat'){const f=a[1];if(!(f in S.files))return fail(t,`cat: ${f||''}: No such file or directory`);t.print(S.files[f]);return true}
+    if(c0==='curl')return curl(a.slice(1),t);
+    if(c0==='minikube')return minikube(a.slice(1),t);
+    if(c0==='kubectl'||c0==='k')return kubectl(a.slice(1),t);
+    if(c0==='docker'){if(a[1]==='ps'&&S.started){t.print(table([['CONTAINER ID','IMAGE','STATUS','NAMES']].concat(S.nodes.map(n=>[hex(12),'gcr.io/k8s-minikube/kicbase:v0.0.45',n.ready?'Up '+ago(n.created):'Exited (137)',n.name]))));t.print('(each minikube "node" is a Docker container on your laptop)','dim');return true}
+      return fail(t,'(this terminal is the Kubernetes lab — Docker commands live in section 05)')}
+    if(c0==='exit'){t.print('(nothing to exit — you are on your laptop)','dim');return true}
+    return fail(t,`bash: ${c0}: command not found`)}
+
+  function render(el){if(!S.started){el.innerHTML=`<div class="kviz"><h4>Cluster</h4><div class="empty" style="padding:18px 4px">Cluster is not running. Start it with <code>minikube start --nodes=3</code>.</div></div>`;return}
+    const podChip=p=>{const tag=splitRef(p.image)[1];return `<span class="pod ${p.status}" style="background:${color(p.image)}" title="${esc(p.name)} · ${esc(p.status)}">${esc(p.dep)}·${esc(p.name.slice(-5))}<small>${esc(tag)} · ${p.status==='Running'?'running':esc(p.status)}</small></span>`};
+    const pend=S.pods.filter(p=>!p.node);
+    el.innerHTML=`<div class="kviz"><h4>Cluster · live</h4>
+      <div class="cp"><b>Control plane</b><span>api-server</span><span>etcd</span><span>scheduler</span><span>controller-manager</span></div>
+      <div class="nodes">${S.nodes.map(n=>{const ps=S.pods.filter(p=>p.node===n.name);return `<div class="node ${n.ready?'':'down'} ${n.cordon?'cord':''}"><div class="nh"><span>${n.name}${n.role==='control-plane'?' ★':''}</span><span class="st">${n.ready?(n.cordon?'Cordoned':'Ready'):'NotReady'}</span></div><div class="pods">${ps.length?ps.map(podChip).join(''):'<span class="empty">no pods</span>'}</div></div>`}).join('')}</div>
+      ${pend.length?`<div class="pending-pods"><span class="empty">Pending (no node available): </span><div class="pods">${pend.map(podChip).join('')}</div></div>`:''}
+      <div class="krow">${Object.values(S.deps).map(d=>{const{al}=calc(d);return `<span class="k">deploy/<b>${esc(d.name)}</b> ${al.filter(p=>p.status==='Running').length}/${d.replicas} ready · ${esc(splitRef(d.image)[1])}</span>`}).join('')}
+      ${Object.values(S.svcs).map(s=>`<span class="k">svc/<b>${esc(s.name)}</b> ${s.type}${s.nodePort?' :'+s.nodePort:''} → ${endpoints(s).length} endpoints</span>`).join('')}</div></div>`}
+  sim.failNode=(name,t)=>{if(!S.started){t.print('(start the cluster first)','dim');return}const n=node(name);if(!n){t.print(`(this cluster has no ${name} — start it with --nodes=3)`,'dim');return}if(!n.ready){t.print('(that node is already down)','dim');return}
+    n.ready=false;event('Normal','NodeNotReady','node/'+n.name,'Node is not ready','node-controller');t.print(`💥 ${n.name} lost power. Its kubelet stopped reporting…`,'hl');mark();const g=gen;
+    setTimeout(()=>{if(g!==gen)return;t.print(`node-controller: ${n.name} is NotReady → evicting its pods (real clusters wait ~5 minutes first)`,'hl');S.pods.filter(p=>p.node===n.name).forEach(terminate)},1800)};
+  sim.recoverNode=(name,t)=>{if(!S.started)return;const n=node(name);if(!n||n.ready){t.print('(nothing to recover)','dim');return}n.ready=true;t.print(`🔌 ${n.name} is back and Ready. Note: pods don't rebalance onto it automatically.`,'hl');mark()};
+  return sim;
+}
+
+/* ============ scenarios ============ */
+const dockerSim=createDockerSim();
+const dockerScenarios=[
+ {title:'First container',desc:'Pull an image, run a web server, look inside, and clean up.',files:[],
+  intro:'# Scenario A · your first container\n# A simulated Docker Engine is running. Follow the steps on the left, or type help.',
+  steps:[
+   {cmd:'docker --version',match:/^docker (--version|-v|version)/,note:'Check the client is installed.'},
+   {cmd:'docker run hello-world',match:/^docker run .*hello-world/,note:'Docker can\'t find the image locally, so it <b>pulls</b> it from Docker Hub, creates a container, runs it, and the container exits.'},
+   {cmd:'docker pull nginx',match:/^docker (image )?pull nginx/,note:'Download an image without running it. <code>nginx</code> means <code>nginx:latest</code>.'},
+   {cmd:'docker images',match:/^docker (images|image ls)/,note:'List local images. Both are now cached on your machine.'},
+   {cmd:'docker run -d --name web -p 8080:80 nginx',match:/^docker run .*-p 8080:80.*nginx|^docker run .*nginx.*-p 8080:80/,note:'<code>-d</code> detached (background), <code>--name</code> a friendly name, <code>-p 8080:80</code> maps host port 8080 → container port 80.'},
+   {cmd:'docker ps',match:/^docker (ps|container ls)$/,note:'Running containers only.'},
+   {cmd:'curl localhost:8080',match:/^curl .*8080/,note:'Your request hits the host port and is forwarded into the container.'},
+   {cmd:'docker logs web',match:/^docker logs .*web/,note:'stdout/stderr of the container\'s main process; your curl appears as an access-log line.'},
+   {cmd:'docker exec -it web bash',match:/^docker exec -it web (ba)?sh/,note:'Open a shell <i>inside</i> the running container.'},
+   {cmd:'ls /usr/share/nginx/html',match:/^ls \/usr\/share\/nginx\/html/,note:'(inside the container) This is the folder nginx serves.'},
+   {cmd:'uname -a',match:/^uname/,note:'(inside) Same kernel as the host: containers share it.'},
+   {cmd:'exit',match:/^exit$/,note:'Leave the shell. The container keeps running.'},
+   {cmd:'docker stop web',match:/^docker (container )?stop web/,note:'Gracefully stop the main process (SIGTERM).'},
+   {cmd:'docker ps -a',match:/^docker ps (-a|--all)/,note:'<code>-a</code> also shows stopped containers. <code>web</code> still exists, stopped.'},
+   {cmd:'docker rm web',match:/^docker (container )?rm web/,note:'Remove the container. The image stays.'}],
+  tryThese:[
+   {cmd:'docker run -d --name web2 -p 8080:80 nginx',why:'Run while <code>web</code> is up: <b>port is already allocated</b>. Two processes can\'t bind one host port.'},
+   {cmd:'docker rm web',why:'While it\'s running → refused. Stop it first or use <code>-f</code>.'},
+   {cmd:'docker run nginx',why:'No <code>-d</code>: the terminal attaches to logs.'},
+   {cmd:'docker pull ngnix',why:'Typo → repository does not exist.'},
+   {cmd:'docker rmi nginx',why:'While a container (even stopped) uses it → conflict.'},
+   {cmd:'docker run alpine',why:'Exits instantly: a container lives only as long as its main process.'}]},
+ {title:'Containerize an ML model',desc:'Build an image for a FastAPI + scikit-learn model, run it, change code, rebuild with cache, and push to a registry.',files:['Dockerfile','requirements.txt','app.py','model.pkl'],
+  intro:'# Scenario B · containerize iris-api\n# This folder has a trained model and a small FastAPI app. Package it.',
+  steps:[
+   {cmd:'ls',match:/^ls$/,note:'Project files: the app, its dependencies, the model, and a Dockerfile.'},
+   {cmd:'cat Dockerfile',match:/^cat Dockerfile/,note:'The recipe. Dependencies are installed <i>before</i> the code is copied in. See section 06 for why.'},
+   {cmd:'docker build -t iris-api:1.0 .',match:/^docker (image )?build .*-t iris-api:1\.0/,note:'Build an image tagged <code>iris-api:1.0</code> from the current folder (<code>.</code> = build context). First build: everything runs.'},
+   {cmd:'docker images',match:/^docker (images|image ls)/,note:'Your image plus the <code>python:3.11-slim</code> base it was built on.'},
+   {cmd:'docker run -d --name api -p 8000:8000 iris-api:1.0',match:/^docker run .*iris-api:1\.0/,note:'Serve the model on port 8000.'},
+   {cmd:'curl localhost:8000/predict',match:/^curl .*8000\/predict/,note:'Real inference, from inside a container.'},
+   {cmd:'echo "# tweak threshold" >> app.py',match:/^echo .*>>? ?app\.py/,note:'Simulate a code change.'},
+   {cmd:'docker build -t iris-api:1.1 .',match:/^docker (image )?build .*-t iris-api:1\.1/,note:'Watch for <b>CACHED</b>: the slow <code>pip install</code> layer is reused; only <code>COPY . .</code> reruns.'},
+   {cmd:'docker tag iris-api:1.1 ketan/iris-api:1.1',match:/^docker (image )?tag iris-api:1\.1 \S+\/iris-api:1\.1/,note:'Add a registry name: <code>&lt;namespace&gt;/&lt;repo&gt;:&lt;tag&gt;</code>. Same image ID, extra name.'},
+   {cmd:'docker login',match:/^docker login/,note:'Authenticate to the registry.'},
+   {cmd:'docker push ketan/iris-api:1.1',match:/^docker push \S+\/iris-api:1\.1/,note:'Upload layers. Shared base layers are "Mounted", not re-uploaded. The Kubernetes lab can now pull it.'}],
+  tryThese:[
+   {cmd:'docker push iris-api:1.1',why:'No namespace → you can\'t push to the official <code>library/</code> space.'},
+   {cmd:'docker build .',why:'No <code>-t</code> → an untagged <code>&lt;none&gt;</code> image.'},
+   {cmd:'docker run -d -p 8000:8000 iris-api:2.0',why:'Tag doesn\'t exist locally or remotely.'},
+   {cmd:'docker exec -it api sh',why:'Then <code>ls</code>, <code>pip list</code>, <code>python --version</code>: the whole environment is baked in.'},
+   {cmd:'echo "numpy==2.1.0" >> requirements.txt',why:'Then rebuild: changing dependencies invalidates the pip layer, so it\'s slow again.'}]},
+ {title:'Volumes, networks & Compose',desc:'Persist data beyond a container\'s life, connect containers by name, then run the whole stack with one file.',files:['Dockerfile','requirements.txt','app.py','model.pkl','compose.yaml'],
+  intro:'# Scenario C · state & multi-container apps\n# Containers are disposable. Data shouldn\'t be.',
+  steps:[
+   {cmd:'docker network create mlnet',match:/^docker network create mlnet/,note:'A user-defined network: containers on it can reach each other <b>by name</b>.'},
+   {cmd:'docker volume create redisdata',match:/^docker volume create redisdata/,note:'Storage that lives outside any container.'},
+   {cmd:'docker run -d --name cache --network mlnet -v redisdata:/data redis:7',match:/^docker run .*--name cache.*-v redisdata:\/data.*redis|^docker run .*-v redisdata:\/data.*--name cache.*redis/,note:'Redis writes to <code>/data</code>, which is now the volume.'},
+   {cmd:'docker exec cache redis-cli SET predictions 42',match:/^docker exec cache redis-cli SET/,note:'Store something.'},
+   {cmd:'docker rm -f cache',match:/^docker rm -f cache|^docker rm --force cache/,note:'Destroy the container completely.'},
+   {cmd:'docker run -d --name cache --network mlnet -v redisdata:/data redis:7',match:/^docker run .*--name cache.*redis/,note:'A brand-new container, same volume…'},
+   {cmd:'docker exec cache redis-cli GET predictions',match:/^docker exec cache redis-cli GET/,note:'…and the data survived. Try the steps again without <code>-v</code> and it\'s gone.'},
+   {cmd:'cat compose.yaml',match:/^cat compose\.yaml/,note:'Declare the whole stack (api + redis + volume) in one file.'},
+   {cmd:'docker compose up -d',match:/^docker compose up/,note:'Builds, creates a network and volume, starts both services.'},
+   {cmd:'docker compose ps',match:/^docker compose ps/,note:'Services in this project.'},
+   {cmd:'curl localhost:8000/predict',match:/^curl .*8000\/predict/,note:'The api reaches redis by the hostname <code>redis</code>; run it twice and watch the counter.'},
+   {cmd:'docker compose down',match:/^docker compose down/,note:'Removes containers and network, keeps the volume. <code>up -d</code> again and the counter continues.'}],
+  tryThese:[
+   {cmd:'docker run -d --name tmp redis:7',why:'Then <code>docker exec tmp redis-cli SET k v</code>, <code>docker rm -f tmp</code>, re-run and <code>GET k</code> → <code>(nil)</code>. No volume, no data.'},
+   {cmd:'docker volume rm redisdata',why:'While <code>cache</code> uses it → "volume is in use".'},
+   {cmd:'docker network inspect mlnet',why:'See which containers are attached and their IPs.'},
+   {cmd:'docker compose down -v',why:'<code>-v</code> deletes the volume too, so the counter resets.'},
+   {cmd:'docker stats',why:'Per-container CPU and memory, as measured by cgroups.'}]}
+];
+
+const k8sSim=createK8sSim();
+const setupRunning=api=>{api.start(3);api.deploy('web','nginx:1.25',2);api.expose('web',80,'NodePort')};
+const k8sScenarios=[
+ {title:'Deploy & expose',desc:'Start a 3-node cluster, run nginx as a Deployment, and reach it through a Service.',
+  intro:'# Scenario A · deploy & expose\n# The cluster is stopped. kubectl will fail until you start it.',
+  steps:[
+   {cmd:'minikube start --nodes=3',match:/^minikube start/,note:'Create a local cluster: 1 control-plane node + 2 workers.'},
+   {cmd:'kubectl get nodes',match:/^kubectl get (nodes|node|no)\b/,note:'Three Ready machines.'},
+   {cmd:'kubectl create deployment web --image=nginx:1.25 --replicas=2',match:/^kubectl create (deployment|deploy) web .*--image/,note:'Declare: "I want 2 nginx pods." Watch them appear in the panel.'},
+   {cmd:'kubectl get pods -o wide',match:/^kubectl get (pods|po|pod)\b/,note:'Each pod got an IP and was placed on a node by the scheduler. Run it again if they\'re still ContainerCreating.'},
+   {cmd:'kubectl get deployments',match:/^kubectl get (deployments?|deploy)\b/,note:'READY 2/2 = desired state reached.'},
+   {cmd:'kubectl expose deployment web --port=80 --type=NodePort',match:/^kubectl expose (deployment|deploy) web .*NodePort/,note:'A Service gives the pods one stable address; NodePort opens it on every node.'},
+   {cmd:'kubectl get svc',match:/^kubectl get (svc|services?)\b/,note:'Note <code>80:31080/TCP</code>: service port 80, node port 31080.'},
+   {cmd:'minikube service web --url',match:/^minikube service web/,note:'The URL to reach it from your laptop.'},
+   {cmd:'curl $(minikube service web --url)',match:/^curl /,note:'Run it a few times and watch which pod answers.'},
+   {cmd:'kubectl describe deployment web',match:/^kubectl describe (deployment|deploy)/,note:'Replicas, strategy, ReplicaSet and events.'},
+   {cmd:'kubectl logs deployment/web',match:/^kubectl logs /,note:'Logs from one of the pods.'}],
+  tryThese:[
+   {cmd:'kubectl get pods',why:'Before <code>minikube start</code>: connection refused, because there is no API server to talk to.'},
+   {cmd:'kubectl create deployment web --image=nginx:1.25',why:'Twice → <b>AlreadyExists</b>. <code>create</code> is imperative; <code>apply</code> is idempotent.'},
+   {cmd:'kubectl create deployment oops --image=nginx:9.9',why:'A tag that doesn\'t exist → <b>ErrImagePull → ImagePullBackOff</b>. Then <code>kubectl describe pod</code> one of them.'},
+   {cmd:'kubectl expose deployment web --port=80',why:'Default type is ClusterIP. Delete <code>svc web</code> first, then try to curl it from outside.'},
+   {cmd:'kubectl get pods -n kube-system',why:'Kubernetes runs its own brain as pods.'},
+   {cmd:'docker ps',why:'With minikube\'s docker driver, each node is a container.'}]},
+ {title:'Scale & self-heal',desc:'Scale out, kill pods, drain and crash nodes, and watch the controllers restore the desired state.',setup:setupRunning,
+  intro:'# Scenario B · scale & self-heal\n# Running: 3 nodes, deployment "web" (2 × nginx:1.25), service "web" on NodePort 31080.\n# Use the crash buttons above the cluster panel at any time.',
+  steps:[
+   {cmd:'kubectl get pods -o wide',match:/^kubectl get (pods|po|pod)\b/,note:'Two pods, spread across nodes.'},
+   {cmd:'kubectl scale deployment web --replicas=5',match:/^kubectl scale .*web .*--replicas=5|^kubectl scale .*--replicas=5 .*web/,note:'Change desired state 2 → 5. The ReplicaSet controller creates 3 more.'},
+   {cmd:'kubectl get pods -o wide',match:/^kubectl get (pods|po|pod)\b/,note:'The scheduler spread them by load.'},
+   {cmd:sim=>'kubectl delete pod '+sim.firstPod('web'),match:/^kubectl delete (pods?|po) \S+/,note:'Kill a pod on purpose…'},
+   {cmd:'kubectl get pods -w',match:/^kubectl get (pods|po|pod) .*(-w|--watch)/,note:'…a replacement with a new name appears within seconds. Pods are cattle, not pets.'},
+   {cmd:'kubectl drain minikube-m02 --ignore-daemonsets',match:/^kubectl drain minikube-m02 .*--ignore-daemonsets/,note:'Planned maintenance: cordon the node and evict its pods. They get rescheduled elsewhere.'},
+   {cmd:'kubectl get nodes',match:/^kubectl get (nodes|node|no)\b/,note:'<code>SchedulingDisabled</code> on m02.'},
+   {cmd:'kubectl get pods -o wide',match:/^kubectl get (pods|po|pod)\b/,note:'Nothing on minikube-m02 anymore; still 5 pods.'},
+   {cmd:'kubectl uncordon minikube-m02',match:/^kubectl uncordon minikube-m02/,note:'Back in service. Existing pods don\'t move back.'},
+   {cmd:'curl http://192.168.49.2:31080',match:/^curl /,note:'The Service never stopped answering.'},
+   {cmd:'kubectl scale deployment web --replicas=2',match:/^kubectl scale .*--replicas=2/,note:'Scale in. Extra pods are terminated.'}],
+  tryThese:[
+   {cmd:'kubectl delete pod --all',why:'Delete every pod at once. All come back, because the Deployment still wants them.'},
+   {cmd:'kubectl drain minikube-m03',why:'Without <code>--ignore-daemonsets</code> → error about the kube-proxy DaemonSet pod.'},
+   {cmd:'kubectl delete deployment web',why:'Then delete a pod: nothing replaces it now. The <i>controller</i> provides self-healing, not the pod.'},
+   {cmd:'kubectl get events',why:'The controllers\' diary: scheduling, pulling, killing, scaling.'},
+   {cmd:'kubectl describe svc web',why:'Endpoints change as pods come and go.'}]},
+ {title:'Rolling update & rollback',desc:'Deploy a model from YAML, ship v1.1 with zero downtime, ship a broken v2.0, and roll back.',files:['deployment.yaml','service.yaml'],
+  setup:api=>api.start(3),
+  intro:'# Scenario C · ship model versions safely\n# Cluster is running (3 nodes). deployment.yaml and service.yaml are in this folder.\n# ketan/iris-api:1.0 and :1.1 exist in the registry; :2.0 does not.',
+  steps:[
+   {cmd:'cat deployment.yaml',match:/^cat deployment\.yaml/,note:'Declarative desired state: 3 replicas, rolling-update strategy, resources, readiness probe.'},
+   {cmd:'kubectl apply -f deployment.yaml',match:/^kubectl apply -f deployment\.yaml/,note:'Send it to the API server. Run again later: "unchanged" (idempotent).'},
+   {cmd:'kubectl apply -f service.yaml',match:/^kubectl apply -f service\.yaml/,note:'Stable endpoint on NodePort 30080.'},
+   {cmd:'kubectl rollout status deployment/model-api',match:/^kubectl rollout status/,note:'Blocks until the rollout finishes; handy in CI/CD.'},
+   {cmd:'curl http://192.168.49.2:30080/predict',match:/^curl .*30080/,note:'<code>model_version: 1.0</code>.'},
+   {cmd:'kubectl set image deployment/model-api model-api=ketan/iris-api:1.1',match:/^kubectl set image .*model-api=\S*iris-api:1\.1/,note:'New version. With maxSurge 1 / maxUnavailable 0, one new pod starts, becomes ready, then one old pod goes.'},
+   {cmd:'kubectl rollout status deployment/model-api',match:/^kubectl rollout status/,note:'Watch it progress. curl during the rollout and you may see both versions.'},
+   {cmd:'kubectl rollout history deployment/model-api',match:/^kubectl rollout history/,note:'Each template change is a revision.'},
+   {cmd:'kubectl set image deployment/model-api model-api=ketan/iris-api:2.0',match:/^kubectl set image .*iris-api:2\.0/,note:'Oops: this tag was never pushed.'},
+   {cmd:'kubectl get pods',match:/^kubectl get (pods|po|pod)\b/,note:'One new pod stuck in <b>ImagePullBackOff</b>, but the 3 old pods keep serving. A bad rollout stalls instead of taking the service down.'},
+   {cmd:'curl http://192.168.49.2:30080/predict',match:/^curl .*30080/,note:'Still answering with 1.1.'},
+   {cmd:'kubectl rollout undo deployment/model-api',match:/^kubectl rollout undo/,note:'Back to the previous revision. The broken pod is removed.'},
+   {cmd:'kubectl get pods',match:/^kubectl get (pods|po|pod)\b/,note:'Healthy again.'}],
+  tryThese:[
+   {cmd:'kubectl set image deployment/model-api api=ketan/iris-api:1.1',why:'Wrong container name: it must match <code>containers[].name</code> in the YAML.'},
+   {cmd:'kubectl describe pod deployment/model-api',why:'After the 2.0 push: the Events section explains <i>why</i> the image failed.'},
+   {cmd:'kubectl rollout undo deployment/model-api --to-revision=1',why:'Jump to a specific revision.'},
+   {cmd:'kubectl scale deployment model-api --replicas=6',why:'Then <code>kubectl apply -f deployment.yaml</code>: the file puts it back to 3. Keep YAML as the source of truth.'},
+   {cmd:'kubectl port-forward svc/model-api-svc 8080:80',why:'Then <code>curl localhost:8080/predict</code>: a debugging tunnel without a NodePort.'}]}
+];
+
+makeLab($('#dockerLab'),{title:'Lab · docker terminal',termName:'bash — ~/iris-api',prompt:'ketan@laptop:~/iris-api$ ',sim:dockerSim,scenarios:dockerScenarios});
+makeLab($('#kubeLab'),{title:'Lab · kubectl terminal',cls:'kube',termName:'bash — ~/k8s',prompt:'ketan@laptop:~/k8s$ ',sim:k8sSim,scenarios:k8sScenarios,
+  extra:(el,term)=>{el.innerHTML=`<div class="kbtns"><button class="btn warn" data-a="crash">💥 Simulate: minikube-m02 crashes</button><button class="btn ghost" data-a="recover">🔌 Recover minikube-m02</button></div>`;
+    $('[data-a=crash]',el).onclick=()=>k8sSim.failNode('minikube-m02',term);$('[data-a=recover]',el).onclick=()=>k8sSim.recoverNode('minikube-m02',term)}});
+
+/* ============ 01 ship it ============ */
+(function(){const out=$('#shipOut'),env=$('#srvEnv');
+  $('#shipCode').onclick=()=>{env.innerHTML='python 3.8.10<br>scikit-learn 0.24.2<br>joblib — <span class="bad">missing</span><br>fastapi — <span class="bad">missing</span><br>libgomp1 — <span class="bad">missing</span>';
+    out.innerHTML=`<span class="p">server$</span> scp -r iris-api/ server:/srv/ &amp;&amp; ssh server\n<span class="p">server$</span> pip install fastapi joblib\n<span class="d">…installs fastapi 0.103 (latest that supports Python 3.8)</span>\n<span class="p">server$</span> uvicorn app:app\n<span class="e">UserWarning: Trying to unpickle estimator DecisionTreeClassifier from version 1.5.2 when using version 0.24.2. This might lead to breaking code or invalid results.</span>\n<span class="e">ModuleNotFoundError: No module named 'sklearn.tree._classes'</span>\n<span class="d">→ Python, sklearn and system libraries all differ from the laptop. Hours of debugging ahead.</span>`};
+  $('#shipImg').onclick=()=>{env.innerHTML='docker 27 <span class="good">✓</span><br><i>everything else lives inside the image:</i><br>python 3.11.10 · scikit-learn 1.5.2<br>joblib 1.4.2 · fastapi 0.115.0<br>libgomp1 <span class="good">✓</span>';
+    out.innerHTML=`<span class="p">laptop$</span> docker build -t ketan/iris-api:1.0 . &amp;&amp; docker push ketan/iris-api:1.0\n<span class="p">server$</span> docker run -d -p 8000:8000 ketan/iris-api:1.0\n<span class="o">INFO:     Model loaded: iris (version 1.0)\nINFO:     Uvicorn running on http://0.0.0.0:8000</span>\n<span class="p">server$</span> curl localhost:8000/predict\n{"prediction":"setosa","model_version":"1.0"}\n<span class="d">→ Identical environment. The server only needed Docker.</span>`};})();
+
+/* ============ 02 pack the server ============ */
+(function(){const r=$('#apps');const RAM=64,VM=2.5,CT=0.53;
+  function upd(){const n=+r.value;$('#appsN').textContent=n;const vm=n*VM,ct=n*CT;
+    $('#vmTxt').textContent=`${vm.toFixed(1)} / ${RAM} GB`+(vm>RAM?' · out of memory!':'');$('#ctTxt').textContent=`${ct.toFixed(1)} / ${RAM} GB`+(ct>RAM?' · out of memory!':'');
+    $('#vmBar i').style.width=Math.min(100,vm/RAM*100)+'%';$('#ctBar i').style.width=Math.min(100,ct/RAM*100)+'%';$('#vmBar').classList.toggle('over',vm>RAM);$('#ctBar').classList.toggle('over',ct>RAM);
+    $('#fVm').textContent=Math.floor(RAM/VM);$('#fCt').textContent=Math.floor(RAM/CT)}
+  r.oninput=upd;upd()})();
+
+/* ============ 04 flow ============ */
+(function(){const C=[
+  {c:'docker build -t app:1.0 .',hi:[0,1],from:0,t:'<b>Dockerfile + code → image</b>, on your laptop. Each instruction becomes a cached layer. Nothing leaves your machine.'},
+  {c:'docker tag app:1.0 ketan/app:1.0',hi:[1],t:'Adds another <b>name</b> to the same local image, including the registry namespace. No data is copied.'},
+  {c:'docker push ketan/app:1.0',hi:[1,2],from:1,t:'<b>Laptop image → registry.</b> Uploads only layers the registry doesn\'t already have. Requires <code>docker login</code>.'},
+  {c:'docker pull ketan/app:1.0',hi:[2,3],from:2,t:'<b>Registry → server.</b> Downloads missing layers. Kubernetes nodes do this automatically when a pod is scheduled.'},
+  {c:'docker run -d ketan/app:1.0',hi:[3,4],from:3,t:'<b>Image → running container.</b> Adds a thin writable layer and starts the process. Pulls first if the image isn\'t local.'},
+  {c:'docker exec -it <ctr> sh',hi:[4],t:'Runs an extra process <b>inside</b> an existing container, for debugging. Changes you make are lost when the container is removed.'},
+  {c:'docker commit <ctr> app:hack',hi:[4,1],from:4,t:'<b>Container → image</b>, snapshotting manual changes. It works but isn\'t reproducible. Prefer editing the Dockerfile.'},
+  {c:'kubectl apply -f deploy.yaml',hi:[2,3,4],from:2,t:'In Kubernetes you never run <code>docker pull/run</code> yourself: the kubelet on each chosen node <b>pulls from the registry and starts containers</b> for you.'}];
+  const row=$('#flowChips');C.forEach((x,i)=>{const b=document.createElement('button');b.className='cchip';b.textContent=x.c;b.onclick=()=>{$$('.cchip',row).forEach(y=>y.classList.remove('on'));b.classList.add('on');$$('#flow .station').forEach((s,j)=>{s.classList.toggle('hi',x.hi.includes(j));s.classList.toggle('src',x.from===j&&x.hi.length>1)});$('#flowExp').innerHTML=`<code>${esc(x.c)}</code><p style="margin:.5em 0 0">${x.t}</p>`};row.appendChild(b)});})();
+
+/* ============ 06 layer cache lab ============ */
+(function(){let order='good',base='3.11',ver={req:1,src:1},cache=new Set(),n=0,last=null;
+  const L=()=>{const from={txt:`FROM python:${base}-slim`,k:'base'+base,s:base==='3.11'?6.2:6.8};const wd={txt:'WORKDIR /app',k:'wd',s:0.1};const req={txt:'COPY requirements.txt .',k:'req'+ver.req,s:0.1};
+    const pip={txt:'RUN pip install -r requirements.txt',k:'pip'+ver.req,s:41.5};const src={txt:'COPY . .',k:'src'+ver.req+'.'+ver.src,s:0.3};const cmd={txt:'CMD ["uvicorn","app:app","--host","0.0.0.0"]',meta:1};
+    return order==='good'?[from,wd,req,pip,src,cmd]:[from,wd,src,pip,cmd]};
+  function draw(res){$('#layers').innerHTML=L().map((l,i)=>{const r=res&&res[i];return `<div class="layer ${l.meta?'meta':r?(r.hit?'cached':'built'):''}"><code>${esc(l.txt)}</code><span class="res">${l.meta?'metadata':r?(r.hit?'CACHED':'built '+r.s.toFixed(1)+'s'):''}</span></div>`}).join('')}
+  function build(){n++;let key='',miss=false,tot=0;const res=L().map(l=>{if(l.meta)return null;key+='|'+l.k+(l.txt==='RUN pip install -r requirements.txt'&&order==='bad'?'after-src'+ver.src:'');const hit=!miss&&cache.has(key);if(!hit){miss=true;cache.add(key);tot+=l.s}return{hit,s:l.s}});
+    draw(res);last=res;const hits=res.filter(r=>r&&r.hit).length,total=res.filter(Boolean).length;
+    const d=document.createElement('div');d.innerHTML=`<b>Build #${n}</b> (${order} order): <b style="color:${tot>10?'var(--warn)':'var(--ok)'}">${tot.toFixed(1)}s</b>, ${hits}/${total} layers from cache`;const log=$('#blog');if(n===1)log.innerHTML='';log.prepend(d)}
+  const note=m=>{const d=document.createElement('div');d.className='muted';d.textContent='✎ '+m;const log=$('#blog');if(n===0){log.innerHTML=''}log.prepend(d);draw(null)};
+  $$('#ordTog button').forEach(b=>b.onclick=()=>{order=b.dataset.o;$$('#ordTog button').forEach(x=>x.classList.toggle('on',x===b));draw(null)});
+  $('#lBuild').onclick=build;$('#lCode').onclick=()=>{ver.src++;note('edited app.py')};$('#lReq').onclick=()=>{ver.req++;ver.src++;note('added a package to requirements.txt')};
+  $('#lBase').onclick=()=>{base=base==='3.11'?'3.12':'3.11';$('#lBase').textContent=base==='3.11'?'⬆️ Bump base to python:3.12-slim':'⬇️ Back to python:3.11-slim';note('base image is now python:'+base+'-slim')};
+  $('#lReset').onclick=()=>{cache.clear();n=0;$('#blog').innerHTML='<span class="muted">Cache cleared.</span>';draw(null)};draw(null)})();
+
+/* ============ 07 architecture ============ */
+(function(){const INFO={
+  kubectl:['kubectl','The CLI. It turns your command or YAML into a REST call to the API server, using credentials from <code>~/.kube/config</code>. It never talks to nodes directly.'],
+  api:['kube-apiserver','The front door and the only component that talks to etcd. It authenticates, authorizes and validates every request, then stores objects. Every other component <i>watches</i> it for changes.'],
+  etcd:['etcd','A consistent, distributed key-value store holding the entire cluster state: every Deployment, Pod and Secret. Back it up; if you lose etcd, you lose the cluster.'],
+  sched:['kube-scheduler','Watches for pods with no node assigned and picks one, based on resource requests, node selectors, affinity, taints/tolerations and spreading. It only <i>decides</i>; it doesn\'t start anything.'],
+  cm:['kube-controller-manager','Runs the control loops: Deployment, ReplicaSet, Node, Job controllers and more. Each compares desired state with actual state and acts to close the gap. This is where self-healing comes from.'],
+  kubelet:['kubelet','The agent on every node. It watches the API server for pods assigned to its node, tells the container runtime to start them, runs liveness/readiness probes and reports status back.'],
+  proxy:['kube-proxy','Programs iptables/IPVS rules on each node so traffic sent to a Service\'s virtual IP or NodePort is spread across the healthy pod endpoints.'],
+  cri:['Container runtime (containerd / CRI-O)','Pulls images and runs containers via the Container Runtime Interface. Same OCI images you build with Docker.']};
+  const TRACE=[['kubectl',['kubectl'],'1. You run <code>kubectl apply -f deployment.yaml</code>. kubectl sends the desired state to the API server.'],
+    ['api',['api','etcd'],'2. The API server validates the Deployment and persists it in <b>etcd</b>. Nothing is running yet; it is just a record of intent.'],
+    ['cm',['cm'],'3. The <b>Deployment controller</b> notices the new Deployment and creates a ReplicaSet; the <b>ReplicaSet controller</b> creates 3 Pod objects with no node assigned.'],
+    ['sched',['sched'],'4. The <b>scheduler</b> sees 3 unscheduled pods and binds each to a node with enough CPU and memory.'],
+    ['kubelet',['kubelet','cri'],'5. On each chosen node, the <b>kubelet</b> sees its new pod and asks <b>containerd</b> to pull the image from the registry and start the container.'],
+    ['proxy',['proxy'],'6. Once readiness probes pass, the pods become Service endpoints and <b>kube-proxy</b> routes Service traffic to them.'],
+    ['cm',['cm','kubelet'],'7. Forever after, the loops keep watching. A pod dies → actual (2) ≠ desired (3) → a new pod is created. This is <b>reconciliation</b>.']];
+  let step=-1;const dots=$('#trDots');TRACE.forEach(()=>dots.appendChild(document.createElement('i')));
+  function hi(keys){$$('.arch .comp').forEach(c=>c.classList.toggle('hi',keys.includes(c.dataset.c)))}
+  $$('.arch .comp').forEach(c=>c.onclick=()=>{const i=INFO[c.dataset.c];hi([c.dataset.c]);$('#archInfo').innerHTML=`<h3>${i[0]}</h3><p class="small" style="margin:0">${i[1]}</p>`});
+  $('#trNext').onclick=()=>{step=(step+1)%TRACE.length;const s=TRACE[step];hi(s[1]);$$('i',dots).forEach((d,j)=>d.classList.toggle('on',j<=step));$('#archInfo').innerHTML=`<h3>${INFO[s[0]][0]}</h3><p class="small" style="margin:0">${s[2]}</p>`;$('#trNext').textContent=step===TRACE.length-1?'↺ Trace again':'▶ Next step'};
+  $('#trReset').onclick=()=>{step=-1;hi([]);$$('i',dots).forEach(d=>d.classList.remove('on'));$('#trNext').textContent='▶ Trace: kubectl apply -f deployment.yaml';$('#archInfo').innerHTML='<span class="muted">Tap any component to see what it does.</span>'}})();
+
+/* ============ 09 reference ============ */
+(function(){const R=[
+ ['docker','docker run -d -p 8080:80 --name web nginx','Run a container in the background with a port mapping'],
+ ['docker','docker run -it --rm alpine sh','Interactive throwaway container, deleted on exit'],
+ ['docker','docker ps / docker ps -a','List running / all containers'],
+ ['docker','docker images','List local images'],
+ ['docker','docker pull IMAGE[:TAG]','Download an image from a registry'],
+ ['docker','docker build -t name:tag .','Build an image from the Dockerfile in the current folder'],
+ ['docker','docker build --no-cache -t name:tag .','Rebuild ignoring the layer cache'],
+ ['docker','docker tag SRC DST','Give an image another name, e.g. for a registry'],
+ ['docker','docker login','Authenticate to a registry'],
+ ['docker','docker push user/name:tag','Upload an image to a registry'],
+ ['docker','docker logs [-f] CONTAINER','Show (follow) a container\'s stdout/stderr'],
+ ['docker','docker exec -it CONTAINER sh','Open a shell in a running container (debug)'],
+ ['docker','docker stop / start / restart CONTAINER','Stop, start or restart a container'],
+ ['docker','docker rm [-f] CONTAINER','Delete a container (-f: even if running)'],
+ ['docker','docker rmi IMAGE','Delete an image'],
+ ['docker','docker inspect OBJECT','Low-level JSON details (IP, mounts, env)'],
+ ['docker','docker stats','Live CPU / memory usage per container'],
+ ['docker','docker volume create|ls|rm NAME','Manage persistent volumes'],
+ ['docker','docker run -v NAME:/path IMAGE','Mount a named volume (data outlives container)'],
+ ['docker','docker run -v $(pwd)/data:/data IMAGE','Bind-mount a host folder (dev loops, datasets)'],
+ ['docker','docker network create|ls NAME','User-defined network: containers resolve each other by name'],
+ ['docker','docker run --gpus all IMAGE','Expose GPUs to a container (needs NVIDIA Container Toolkit)'],
+ ['docker','docker system prune [-a]','Clean up stopped containers, unused networks, dangling images'],
+ ['docker','docker system df','Disk used by images, containers, volumes'],
+ ['compose','docker compose up -d','Build and start all services in compose.yaml'],
+ ['compose','docker compose ps','List the project\'s containers'],
+ ['compose','docker compose logs -f SERVICE','Follow logs of one service'],
+ ['compose','docker compose down [-v]','Stop and remove containers and network (-v: volumes too)'],
+ ['compose','docker compose build','Rebuild service images'],
+ ['minikube','minikube start --nodes=3','Start a local multi-node cluster'],
+ ['minikube','minikube status / stop / delete','Check, stop or destroy the cluster'],
+ ['minikube','minikube service NAME --url','Get a URL for a NodePort service'],
+ ['minikube','minikube addons enable metrics-server','Enable kubectl top'],
+ ['minikube','minikube image load name:tag','Copy a local image into the cluster without a registry'],
+ ['kubectl','kubectl get nodes','List cluster machines'],
+ ['kubectl','kubectl get pods -o wide','List pods with IPs and nodes'],
+ ['kubectl','kubectl get pods -w','Watch pods change in real time'],
+ ['kubectl','kubectl get all','Pods, services, deployments, replicasets'],
+ ['kubectl','kubectl get pods -n kube-system','System components (other namespace)'],
+ ['kubectl','kubectl describe pod NAME','Details + Events: first stop when a pod misbehaves'],
+ ['kubectl','kubectl logs POD [-f] [--previous]','Container logs (--previous: before last crash)'],
+ ['kubectl','kubectl exec -it POD -- sh','Shell inside a pod'],
+ ['kubectl','kubectl create deployment N --image=I','Imperatively create a deployment'],
+ ['kubectl','kubectl apply -f file.yaml','Create or update from YAML (declarative, idempotent)'],
+ ['kubectl','kubectl delete -f file.yaml','Delete what a file defines'],
+ ['kubectl','kubectl delete pod NAME','Delete a pod (a Deployment will replace it)'],
+ ['kubectl','kubectl expose deployment N --port=80 --type=NodePort','Create a Service for a deployment'],
+ ['kubectl','kubectl scale deployment N --replicas=5','Change the number of replicas'],
+ ['kubectl','kubectl autoscale deployment N --min=2 --max=10 --cpu-percent=70','Create a Horizontal Pod Autoscaler'],
+ ['kubectl','kubectl set image deployment/N C=IMG','Rolling update to a new image'],
+ ['kubectl','kubectl rollout status deployment/N','Wait for a rollout to finish'],
+ ['kubectl','kubectl rollout history deployment/N','List revisions'],
+ ['kubectl','kubectl rollout undo deployment/N [--to-revision=K]','Roll back'],
+ ['kubectl','kubectl rollout restart deployment/N','Restart all pods (e.g. to pick up a new ConfigMap)'],
+ ['kubectl','kubectl port-forward svc/N 8080:80','Tunnel a local port to a service or pod'],
+ ['kubectl','kubectl cordon / uncordon NODE','Stop / resume scheduling onto a node'],
+ ['kubectl','kubectl drain NODE --ignore-daemonsets','Evict pods for maintenance'],
+ ['kubectl','kubectl get events --sort-by=.lastTimestamp','Cluster event log'],
+ ['kubectl','kubectl top pods','CPU / memory per pod (needs metrics-server)'],
+ ['kubectl','kubectl create configmap N --from-file=config.yaml','Store config for pods'],
+ ['kubectl','kubectl create secret generic N --from-literal=KEY=V','Store credentials for pods'],
+ ['kubectl','kubectl config get-contexts / use-context C','Switch between clusters'],
+ ['kubectl','kubectl explain deployment.spec','Built-in docs for any YAML field']];
+  const cats=['all','docker','compose','kubectl','minikube'];let cat='all';const tbl=$('#refTbl'),q=$('#refQ'),cb=$('#refCats');
+  cats.forEach(c=>{const b=document.createElement('button');b.className='fchip'+(c==='all'?' on':'');b.textContent=c;b.onclick=()=>{cat=c;$$('.fchip',cb).forEach(x=>x.classList.toggle('on',x===b));draw()};cb.appendChild(b)});
+  function draw(){const s=q.value.toLowerCase().trim();const rows=R.filter(r=>(cat==='all'||r[0]===cat)&&(!s||(r[1]+' '+r[2]).toLowerCase().includes(s)));
+    tbl.innerHTML='<tr><th>Command</th><th>Purpose</th><th class="cathead">Tool</th></tr>'+(rows.length?rows.map(r=>`<tr><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td><td class="catcell"><span class="cat">${r[0]}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">No matches.</td></tr>')}
+  q.oninput=draw;draw()})();
+
+/* ============ 10 quiz ============ */
+(function(){const Q=[
+ ['You stopped a container and it vanished from docker ps. How do you see it?',['docker ps -a','docker images','docker logs','docker inspect'],0,'<code>docker ps</code> shows only running containers; <code>-a</code> includes stopped ones.'],
+ ['You built iris-api:1.1 on your laptop. Which pair of commands gets it onto a server through a registry?',['docker save / docker load','docker push (laptop) → docker pull (server)','docker commit → docker run','docker export → docker import'],1,'Registries are the normal path: push from where it was built, pull where it runs. (save/load works offline but bypasses the registry.)'],
+ ['A Redis container lost all its data after docker rm. What should you have used?',['--rm','A named volume: -v redisdata:/data','-p 6379:6379','--network host'],1,'Container filesystems are deleted with the container. Volumes live outside it.'],
+ ['You only changed app.py, yet every build reinstalls all pip packages. Most likely cause?',['The base image is too big','COPY . . comes before RUN pip install','You forgot -t','Docker has no cache'],1,'Copying all code before installing dependencies means any code change invalidates the pip layer. Copy requirements.txt first.'],
+ ['Why do containers start in under a second while VMs take tens of seconds?',['Containers use faster disks','Containers share the host kernel; no guest OS has to boot','Containers skip networking','VMs are always remote'],1,'A container is an isolated process on the existing kernel; a VM boots a whole operating system.'],
+ ['You delete a pod that belongs to a Deployment with replicas: 3. What happens?',['The Deployment drops to 2 replicas','Its ReplicaSet creates a replacement pod','The node restarts','Nothing until you re-apply'],1,'The controller sees 2 ≠ 3 and creates a new pod (with a new name and IP). That is reconciliation.'],
+ ['Pods keep getting new IPs. What gives clients one stable address?',['A ConfigMap','A Service','A ReplicaSet','A Namespace'],1,'A Service has a stable virtual IP / DNS name and load-balances to whichever pods match its selector.'],
+ ['A rollout is stuck with ImagePullBackOff. Fastest way back to the last good version?',['kubectl delete deployment','kubectl rollout undo deployment/model-api','docker pull on every node','minikube delete'],1,'Rollback switches the Deployment to the previous ReplicaSet; the old pods were still serving anyway.'],
+ ['Which component decides which node a new pod runs on?',['kubelet','kube-proxy','kube-scheduler','etcd'],2,'The scheduler picks a node; the kubelet on that node then starts the pod.']];
+  let i=0,score=0;const ans={};const el=$('#quiz');
+  function draw(){const q=Q[i];el.innerHTML=`<div class="qhead"><span>Question ${i+1} of ${Q.length}</span><span>Score: ${score}/${Object.keys(ans).length}</span></div><div class="qtext">${q[0]}</div><div class="opts">${q[1].map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}</div><div class="qexp"></div><div class="qnav"><button class="btn ghost" id="qPrev" ${i===0?'disabled':''}>← Previous</button><button class="btn" id="qNext">${i===Q.length-1?'Restart':'Next →'}</button></div>`;
+    const show=j=>{$$('.opt',el).forEach((b,k)=>{b.disabled=true;if(k===q[2])b.classList.add('right');else if(k===j)b.classList.add('wrong')});$('.qexp',el).innerHTML=(j===q[2]?'<b style="color:var(--ok)">Correct.</b> ':'<b style="color:var(--err)">Not quite.</b> ')+q[3]};
+    if(i in ans)show(ans[i]);
+    $$('.opt',el).forEach(b=>b.onclick=()=>{const j=+b.dataset.j;ans[i]=j;if(j===q[2])score++;show(j);$('.qhead span:last-child',el).textContent=`Score: ${score}/${Object.keys(ans).length}`});
+    $('#qPrev').onclick=()=>{i--;draw()};$('#qNext').onclick=()=>{if(i===Q.length-1){i=0;score=0;for(const k in ans)delete ans[k]}else i++;draw()}}
+  draw()})();
+
+/* ============ 11 activities ============ */
+(function(){const A=[
+ ['Port clash detective','Docker lab · Scenario A',['Run nginx as <code>web</code> on 8080.','Try a second nginx on 8080 and read the error.','Fix it by mapping a different host port (e.g. <code>-p 8081:80</code>) and curl both.','Explain why the <i>container</i> port can be 80 in both.']],
+ ['Prove persistence','Docker lab · Scenario C',['Run redis <b>without</b> a volume, SET a key, <code>rm -f</code>, re-run, GET → (nil).','Repeat <b>with</b> <code>-v redisdata:/data</code>. GET returns the value.','Write one sentence on where model artifacts and feature stores should live.']],
+ ['Speed up the build','Section 06 layer lab',['Build twice in "Bad order", editing app.py between builds. Note the time.','Switch to "Good order" and repeat.','What changes when you add a package instead? Why can\'t ordering help there?']],
+ ['Chaos engineering lite','Kubernetes lab · Scenario B',['Scale <code>web</code> to 5.','Click "minikube-m02 crashes" and watch the panel.','Keep curling the NodePort on 192.168.49.2. Did the service ever go down?','Recover the node: do pods move back? Why not?']],
+ ['Ship a bad model','Kubernetes lab · Scenario C',['Roll out 1.1, then the non-existent 2.0.','<code>kubectl describe pod</code> the stuck pod and find the reason in Events.','Undo. Then explain how maxSurge 1 / maxUnavailable 0 protected users.']],
+ ['Discuss: when NOT to use Kubernetes','Pairs · 5 minutes',['A single model API with 50 requests/day: Docker on one VM, a serverless container platform, or Kubernetes?','List three costs Kubernetes adds (ops, learning curve, …).','When does it start to pay off (many services, autoscaling, GPUs, teams)?']]];
+  const el=$('#acts');A.forEach((a,i)=>{const d=document.createElement('div');d.className='card act';d.innerHTML=`<div class="num">ACTIVITY ${String(i+1).padStart(2,'0')} · ${a[1]}</div><h3>${a[0]}</h3><ol>${a[2].map(s=>`<li>${s}</li>`).join('')}</ol><label><input type="checkbox"> Done</label>`;$('input',d).onchange=e=>d.classList.toggle('done',e.target.checked);el.appendChild(d)})})();
+
+/* ============ scroll progress + toc ============ */
+(function(){const bar=$('#bar'),pct=$('#pct'),links=$$('#toc a');
+  function onScroll(){const h=document.documentElement;const p=Math.round(h.scrollTop/Math.max(1,h.scrollHeight-h.clientHeight)*100);bar.style.width=p+'%';pct.textContent=p+'%';
+    let cur=null;$$('main section').forEach(s=>{if(s.getBoundingClientRect().top<140)cur=s.id});links.forEach(a=>{const on=a.getAttribute('href')==='#'+cur;if(on&&!a.classList.contains('on')){a.classList.add('on');a.scrollIntoView({block:'nearest',inline:'center'})}else if(!on)a.classList.remove('on')})}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll()})();
+</script>
+</body>
+</html>
