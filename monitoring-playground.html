@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Monitoring, Logging & MLOps Best Practices Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f3ee;--paper:#fff;--paper2:#fbfaf6;--ink:#14161b;--muted:#5b616d;--line:#e2dfd5;
+  --docker:#1d63ed;--k8s:#326ce5;--teal:#0d9488;--ok:#15803d;--warn:#b45309;--err:#b91c1c;
+  --term:#0d1117;--term-ink:#d1d9e6;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+code,kbd,.mono{font-family:var(--mono);font-size:.9em}
+p code,li code,td code,.note code{background:#ecebe4;border:1px solid #dcd9ce;border-radius:5px;padding:1px 5px}
+a{color:var(--docker)}
+button{font:inherit;cursor:pointer}
+
+/* header */
+header.top{position:sticky;top:0;z-index:30;background:rgba(244,243,238,.93);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px 8px;max-width:1200px;margin:auto}
+.brand{font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .tag{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;background:var(--ink);color:#fff;border-radius:4px;padding:2px 6px;margin-right:8px}
+.pct{margin-left:auto;font:500 12px var(--mono);color:var(--muted);white-space:nowrap}
+.progress{height:3px;background:linear-gradient(90deg,var(--docker),var(--teal));width:0;transition:width .1s}
+.toc{display:flex;gap:6px;overflow-x:auto;padding:0 20px 10px;max-width:1200px;margin:auto;scrollbar-width:none}
+.toc::-webkit-scrollbar{display:none}
+.toc a{white-space:nowrap;font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--muted);text-decoration:none;background:var(--paper)}
+.toc a b{font-family:var(--mono);font-weight:500;margin-right:4px;color:#9a9ea8}
+.toc a.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc a.on b{color:#aab}
+
+main{max-width:1200px;margin:auto;padding:0 20px 60px}
+.hero{padding:56px 0 18px}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.04;letter-spacing:-.02em;margin:.25em 0 .3em}
+.hero p{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:780px;margin:0}
+.hero .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:5px 11px}
+section{padding:60px 0 6px;scroll-margin-top:96px;border-top:1px solid var(--line);margin-top:40px}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.09em;color:var(--docker);text-transform:uppercase}
+.eyebrow.k{color:var(--k8s)}
+h2{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:.35em 0 .35em;letter-spacing:-.015em}
+h3{font-size:19px;margin:0 0 .4em}
+.lede{color:var(--muted);max-width:800px;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card p:last-child{margin-bottom:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;padding:7px 13px;font-size:14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.blue{background:var(--docker);border-color:var(--docker)}
+.btn.kb{background:var(--k8s);border-color:var(--k8s)}
+.btn.warn{background:#fff7ed;color:var(--warn);border-color:#fed7aa}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.labtag{display:inline-block;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+.callout{border-left:3px solid var(--docker);background:#eef3fe;padding:12px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.callout.k{border-color:var(--k8s)}
+.callout.amber{border-color:#d97706;background:#fff7ed}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{background:var(--paper2);font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tbl tr:last-child td{border-bottom:0}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* 01 works on my machine */
+.env{font:13px/1.7 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.env .bad{color:var(--err);font-weight:600}
+.env .good{color:var(--ok);font-weight:600}
+.miniterm{background:var(--term);color:var(--term-ink);font:12.5px/1.55 var(--mono);border-radius:10px;padding:12px 14px;min-height:150px;white-space:pre-wrap;word-break:break-word}
+.miniterm .e{color:#ff7b72}.miniterm .o{color:#7ee787}.miniterm .d{color:#8b949e}.miniterm .p{color:#79c0ff}
+
+/* 02 stacks */
+.stacks{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:700px){.stacks{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:5px}
+.stack .row{display:flex;gap:5px}
+.blk{flex:1;text-align:center;border-radius:7px;padding:7px 4px;font:500 12.5px var(--mono);border:1px solid rgba(0,0,0,.06)}
+.b-app{background:#dbeafe;color:#1e3a8a}.b-lib{background:#e0f2fe;color:#075985}.b-gos{background:#fde68a;color:#78350f}
+.b-hyp{background:#fecaca;color:#7f1d1d}.b-rt{background:#bbf7d0;color:#14532d}.b-os{background:#e5e7eb;color:#1f2937}.b-hw{background:#374151;color:#f9fafb}
+.stack h3{display:flex;justify-content:space-between;align-items:baseline}
+.stack h3 span{font:500 12px var(--mono);color:var(--muted)}
+.pack{margin-top:18px}
+.pack input[type=range]{width:100%;accent-color:var(--docker)}
+.meter{margin:12px 0}
+.meter .lbl{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.bar{height:16px;background:#ecebe4;border-radius:99px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .25s}
+.bar .vm{background:#f59e0b}.bar .ct{background:var(--docker)}
+.bar.over i{background:var(--err)!important}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+@media (max-width:700px){.facts{grid-template-columns:1fr 1fr}}
+.fact{background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.fact b{display:block;font:600 20px var(--sans)}
+.fact span{font-size:12.5px;color:var(--muted)}
+
+/* 04 flow */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch;margin:18px 0 6px}
+@media (max-width:820px){.flow{grid-template-columns:1fr}}
+.station{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px;text-align:center;transition:.2s;position:relative}
+.station .where{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.station .what{font-weight:600;margin-top:4px}
+.station .ico{font-size:24px}
+.station.hi{border-color:var(--docker);background:#eef3fe;box-shadow:0 0 0 3px rgba(29,99,237,.12)}
+.station.src{border-color:#d97706;background:#fff7ed}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.cchip{font:500 13px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px 10px}
+.cchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.explain{min-height:72px}
+
+/* LAB */
+.lab{border:1px solid var(--line);border-radius:16px;background:var(--paper);overflow:hidden;margin-top:24px;box-shadow:0 1px 0 rgba(0,0,0,.02),0 10px 30px -18px rgba(0,0,0,.18)}
+.lab-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--paper2)}
+.lab-title{font:600 13px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--teal)}
+.scen-desc{font-size:14px;color:var(--muted);margin-top:2px;max-width:640px}
+.lab-actions{display:flex;align-items:center;gap:10px}
+.step-prog{font:500 12px var(--mono);color:var(--muted)}
+.scen-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.scen-tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;padding:12px 16px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab span{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;display:block;color:#9a9ea8}
+.tab.on{color:var(--ink);border-bottom-color:var(--docker);font-weight:600}
+.tab.on span{color:var(--docker)}
+.lab.kube .tab.on{border-bottom-color:var(--k8s)}
+.lab-grid{display:grid;grid-template-columns:330px 1fr;min-height:540px}
+@media (max-width:900px){.lab-grid{grid-template-columns:1fr}}
+.guide{border-right:1px solid var(--line);padding:14px 14px 18px;background:#fdfdfb;max-height:860px;overflow:auto}
+@media (max-width:900px){.guide{border-right:0;border-bottom:1px solid var(--line);max-height:none}}
+.guide summary{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);cursor:pointer;margin:4px 0 8px}
+.guide ol{margin:0;padding:0;list-style:none;counter-reset:s}
+.guide ol li{counter-increment:s;position:relative;padding:7px 0 9px 30px;border-bottom:1px dashed #ebe9e1}
+.guide ol li::before{content:counter(s);position:absolute;left:0;top:8px;width:21px;height:21px;border-radius:50%;background:#efede6;color:var(--muted);font:600 11px/21px var(--mono);text-align:center}
+.guide ol li.done::before{content:'✓';background:var(--ok);color:#fff}
+.guide ol li.next::before{background:var(--docker);color:#fff}
+.lab.kube .guide ol li.next::before{background:var(--k8s)}
+.guide ol li.done .cmdchip{opacity:.6}
+.cmdchip{display:inline-block;text-align:left;font:500 12.5px/1.45 var(--mono);background:#f1f0ea;border:1px solid #dedbd0;border-radius:6px;padding:3px 7px;color:var(--ink);word-break:break-all}
+.cmdchip:hover{border-color:var(--ink);background:#fff}
+li.next .cmdchip{background:#eef3fe;border-color:#bfd2fb}
+.guide .note{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.guide ul{margin:0;padding:0;list-style:none}
+.guide ul li{padding:6px 0 8px;border-bottom:1px dashed #ebe9e1}
+.guide ul li .cmdchip{background:#fff7ed;border-color:#fed7aa}
+.work{padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+
+.term{background:var(--term);color:var(--term-ink);border-radius:12px;font:13px/1.55 var(--mono);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.t-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#161b22;border-bottom:1px solid #21262d}
+.t-bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block}
+.t-bar i:nth-child(2){background:#febc2e}.t-bar i:nth-child(3){background:#28c840}
+.t-name{margin-left:8px;color:#8b949e;font-size:12px}
+.t-body{height:400px;overflow:auto;padding:12px 14px;cursor:text;-webkit-overflow-scrolling:touch}
+@media (max-width:600px){.t-body{height:340px;font-size:12px}}
+.ln{white-space:pre;min-height:1.55em}
+.ln.err{color:#ff7b72}.ln.ok{color:#7ee787}.ln.dim{color:#8b949e;white-space:pre-wrap}.ln.hl{color:#e3b341}
+.ln.cmd{color:#fff;margin-top:4px;white-space:pre-wrap;word-break:break-all}
+.ln.cmd .p,.t-prompt{color:#79c0ff}
+.t-line{display:flex;align-items:center;gap:6px;margin-top:4px}
+.t-prompt{white-space:pre}
+.t-in{flex:1;min-width:40px;background:transparent;border:0;color:#fff;font:inherit;outline:none;caret-color:#7ee787;padding:0}
+@media (max-width:600px){.t-in{font-size:16px}}
+.suggest>span{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper2);border-radius:7px;padding:5px 9px;color:var(--ink);text-align:left;word-break:break-all}
+.chips button:first-child{border-color:#9db8f6;background:#eef3fe}
+.chips button:hover{border-color:var(--ink)}
+.extra:empty{display:none}
+
+/* docker viz */
+.viz{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper2)}
+.viz h4{margin:0 0 8px;font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dviz{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+@media (max-width:700px){.dviz{grid-template-columns:1fr}}
+.vbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}
+.vbox.reg{border-style:dashed}
+.vh{font:600 12.5px var(--sans);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.vh small{font:500 11px var(--mono);color:var(--muted)}
+.vsec{margin-top:8px}
+.vsec>b{display:block;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:#8a8f99;margin-bottom:4px}
+.vchips{display:flex;flex-wrap:wrap;gap:5px}
+.vc{font:500 11.5px/1.35 var(--mono);border-radius:6px;padding:3px 7px;border:1px solid var(--line);background:var(--paper2)}
+.vc.img{background:#eef3fe;border-color:#c9d8fb;color:#1e3a8a}
+.vc.run{background:#ecfdf3;border-color:#a7e3bf;color:#14532d}
+.vc.run::before{content:'● ';color:#16a34a}
+.vc.stop{background:#f3f4f6;color:#6b7280}
+.vc.stop::before{content:'○ '}
+.vc.vol{background:#fdf4ff;border-color:#f0c6f7;color:#701a75}
+.vc.net{background:#f0fdfa;border-color:#a7ece0;color:#115e59}
+.vc .sub{display:block;font-size:10.5px;opacity:.8}
+.empty{font-size:12px;color:#9a9ea8;font-style:italic}
+
+/* k8s viz */
+.kviz .cp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1.5px solid #c9d6f7;background:#f3f6fe;border-radius:10px;padding:8px 10px;margin-bottom:10px}
+.kviz .cp b{font:600 12px var(--sans);margin-right:4px}
+.kviz .cp span{font:500 11px var(--mono);background:#fff;border:1px solid #c9d6f7;border-radius:5px;padding:2px 6px;color:#1e40af}
+.nodes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:700px){.nodes{grid-template-columns:1fr}}
+.node{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:8px;min-height:92px;transition:.3s}
+.node .nh{display:flex;justify-content:space-between;align-items:center;gap:6px;font:600 12px var(--mono);margin-bottom:6px}
+.node .st{font:600 10px var(--mono);padding:1px 6px;border-radius:99px;background:#dcfce7;color:#166534;white-space:nowrap}
+.node.down{background:repeating-linear-gradient(135deg,#fef2f2,#fef2f2 8px,#fff 8px,#fff 16px);border-color:#fca5a5}
+.node.down .st{background:#fee2e2;color:#991b1b}
+.node.cord{border-style:dashed;border-color:#f59e0b}
+.node.cord .st{background:#fef3c7;color:#92400e}
+.pods{display:flex;flex-wrap:wrap;gap:5px}
+.pod{font:500 10.5px/1.3 var(--mono);border-radius:7px;padding:4px 6px;color:#fff;min-width:64px;position:relative;transition:.3s}
+.pod small{display:block;opacity:.85;font-size:9.5px}
+.pod.ContainerCreating,.pod.Pending{opacity:.55;animation:pulse 1s infinite alternate}
+.pod.Terminating{opacity:.3;text-decoration:line-through}
+.pod.ErrImagePull,.pod.ImagePullBackOff{background:#fff!important;color:var(--err);border:1.5px dashed var(--err)}
+@keyframes pulse{from{opacity:.35}to{opacity:.8}}
+.krow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font:500 11.5px var(--mono)}
+.krow .k{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:3px 7px}
+.krow .k b{color:var(--k8s)}
+.pending-pods{margin-top:8px}
+.kbtns{display:flex;flex-wrap:wrap;gap:6px}
+.kbtns .btn{font-size:13px;padding:5px 10px}
+
+/* layers lab */
+.layers{font:13px/1.5 var(--mono);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+.layer{display:grid;grid-template-columns:1fr 120px;gap:8px;padding:8px 12px;border-bottom:1px solid #eeece5;align-items:center}
+.layer:last-child{border-bottom:0}
+.layer code{background:none;border:0;padding:0;word-break:break-all}
+.layer .res{text-align:right;font-size:12px;font-weight:600}
+.layer.cached .res{color:var(--ok)}
+.layer.built .res{color:var(--warn)}
+.layer.built{background:#fffaf0}
+.layer.meta{color:#8a8f99}
+.buildlog{font:12.5px/1.6 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:160px;overflow:auto;margin-top:10px}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.toggle button{border:0;background:var(--paper);padding:7px 12px;font-size:13.5px}
+.toggle button.on{background:var(--ink);color:#fff}
+
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr;gap:12px}
+.cpbox{border:2px solid #c9d6f7;background:#f3f6fe;border-radius:14px;padding:12px}
+.cpbox>.t,.wbox>.t{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:#1e40af;margin-bottom:8px}
+.comps{display:flex;flex-wrap:wrap;gap:8px}
+.comp{border:1.5px solid #c9d6f7;background:#fff;border-radius:10px;padding:8px 12px;font:600 13px var(--mono);color:#1e3a8a;transition:.2s}
+.comp:hover{border-color:var(--k8s)}
+.comp.hi{background:var(--k8s);color:#fff;border-color:var(--k8s);box-shadow:0 0 0 4px rgba(50,108,229,.18)}
+.wnodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){.wnodes{grid-template-columns:1fr}}
+.wbox{border:2px solid var(--line);border-radius:14px;padding:12px;background:var(--paper)}
+.wbox>.t{color:var(--muted)}
+.wbox .comp{border-color:var(--line);color:var(--ink)}
+.wbox .comp.hi{background:var(--k8s);color:#fff}
+.podmini{display:inline-block;font:500 11px var(--mono);background:#e0e7ff;color:#3730a3;border-radius:6px;padding:3px 7px;margin:2px}
+.kctl{display:flex;align-items:center;gap:8px}
+.archinfo{min-height:120px}
+.tracebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.dots{display:flex;gap:5px}
+.dots i{width:8px;height:8px;border-radius:50%;background:#d8d5cb;display:inline-block}
+.dots i.on{background:var(--k8s)}
+
+/* reference */
+.refbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0}
+.refbar input{flex:1;min-width:220px;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 14px;font:15px var(--sans)}
+.refbar input:focus{outline:2px solid var(--docker);border-color:transparent}
+.fchip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:13px}
+.fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ref td:first-child{white-space:nowrap}
+.ref td:first-child code{background:none;border:0;padding:0;font-size:13px;color:#1e3a8a}
+.ref .cat{font:500 11px var(--mono);text-transform:uppercase;color:var(--muted)}
+@media (max-width:700px){.ref td:first-child{white-space:normal}.ref .cathead{display:none}.ref td.catcell{display:none}}
+
+/* quiz */
+.quiz{max-width:820px}
+.qhead{display:flex;justify-content:space-between;font:500 13px var(--mono);color:var(--muted);margin-bottom:10px}
+.qtext{font-size:19px;font-weight:600;margin-bottom:14px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 14px;font:500 14.5px var(--mono)}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#ecfdf3}
+.opt.wrong{border-color:var(--err);background:#fef2f2}
+.opt:disabled{cursor:default}
+.qexp{margin-top:12px;font-size:15px;min-height:24px}
+.qnav{display:flex;justify-content:space-between;margin-top:16px}
+
+/* activities */
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.acts{grid-template-columns:1fr}}
+.act{position:relative}
+.act .num{font:600 12px var(--mono);color:var(--teal)}
+.act h3{margin-top:4px}
+.act ol{padding-left:20px;margin:8px 0 0;font-size:15px}
+.act label{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted);margin-top:12px;cursor:pointer}
+.act.done{border-color:#a7e3bf;background:#f6fdf9}
+
+.takeaways{counter-reset:t;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:820px){.takeaways{grid-template-columns:1fr}}
+.takeaways li{counter-increment:t;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 52px;position:relative}
+.takeaways li::before{content:counter(t,decimal-leading-zero);position:absolute;left:16px;top:14px;font:600 14px var(--mono);color:var(--docker)}
+dl.gloss{display:grid;grid-template-columns:200px 1fr;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+dl.gloss dt,dl.gloss dd{margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+dl.gloss dt{font:600 14px var(--mono);background:var(--paper2)}
+@media (max-width:640px){dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:2px}}
+footer{border-top:1px solid var(--line);padding:30px 20px 50px;text-align:center;color:var(--muted);font-size:14px}
+
+
+/* ---- additions for MLOps labs ---- */
+.eyebrow.g{color:var(--teal)}
+.eyebrow.v{color:#7c3aed}
+/* pipeline strip */
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:14px 0}
+.stg{flex:1 1 110px;min-width:104px;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 9px;font-size:13px;position:relative;transition:.25s}
+.stg .n{font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stg .nm{font-weight:600;line-height:1.25;margin-top:2px}
+.stg .tm{font:500 11px var(--mono);color:var(--muted);margin-top:4px;min-height:14px}
+.stg.run{border-color:var(--docker);background:#eef3fe;animation:pulse2 .8s infinite alternate}
+.stg.ok{border-color:#86d3a5;background:#f0fbf4}
+.stg.ok .tm{color:var(--ok)}
+.stg.fail{border-color:#f5a3a3;background:#fef2f2}
+.stg.fail .tm{color:var(--err)}
+.stg.skip{opacity:.45}
+.stg.gate::after{content:'GATE';position:absolute;top:6px;right:7px;font:600 9px var(--mono);color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:0 4px}
+.stg.hl{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+.stg.dim{opacity:.35}
+@keyframes pulse2{from{box-shadow:0 0 0 0 rgba(29,99,237,.0)}to{box-shadow:0 0 0 4px rgba(29,99,237,.18)}}
+.faults{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}
+.faults label{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.plog{font:12.5px/1.6 var(--mono);background:var(--term);color:var(--term-ink);border-radius:10px;padding:10px 12px;min-height:120px;max-height:240px;overflow:auto;white-space:pre-wrap}
+.plog .e{color:#ff7b72}.plog .o{color:#7ee787}.plog .d{color:#8b949e}.plog .w{color:#e3b341}
+/* lab viz panels */
+.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:820px){.panels{grid-template-columns:1fr}}
+.pnl{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:10px;min-width:0}
+.pnl .vh{margin-bottom:6px}
+.kv{display:flex;justify-content:space-between;gap:8px;font:500 12px var(--mono);padding:3px 0;border-bottom:1px dashed #eeece5}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.badge{display:inline-block;font:600 10.5px var(--mono);padding:1px 7px;border-radius:99px;white-space:nowrap}
+.b-ok{background:#dcfce7;color:#166534}.b-fail{background:#fee2e2;color:#991b1b}.b-run{background:#dbeafe;color:#1e40af}.b-warn{background:#fef3c7;color:#92400e}.b-gray{background:#f3f4f6;color:#4b5563}.b-vio{background:#ede9fe;color:#5b21b6}
+.mstages{display:flex;flex-direction:column;gap:4px}
+.mst{display:flex;justify-content:space-between;align-items:center;font:500 12px var(--mono);border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:var(--paper2)}
+.mst.changed{border-color:#fcd34d;background:#fffbeb}
+.mst.running{border-color:#93c5fd;background:#eff6ff}
+.mst.fresh{border-color:#a7e3bf;background:#f0fbf4}
+/* traffic viz */
+.tbar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);font:600 11.5px/26px var(--mono);color:#fff;margin:6px 0}
+.tbar div{transition:width .5s;white-space:nowrap;overflow:hidden;text-align:center}
+.tb-a{background:#326ce5}.tb-b{background:#0d9488}.tb-bad{background:#dc2626}.tb-mirror{background:repeating-linear-gradient(135deg,#a78bfa,#a78bfa 6px,#c4b5fd 6px,#c4b5fd 12px)}
+.dots2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.dots2 i{width:13px;height:13px;border-radius:4px;display:inline-block}
+.dots2 i.s{background:#326ce5}.dots2 i.c{background:#0d9488}.dots2 i.x{background:#dc2626}.dots2 i.p{opacity:.4;animation:pulse 1s infinite alternate}
+.stepdots{display:flex;gap:4px;align-items:center}
+.stepdots i{width:18px;height:6px;border-radius:3px;background:#e5e3dc;display:inline-block}
+.stepdots i.on{background:var(--teal)}.stepdots i.cur{background:#f59e0b}
+/* strategies widget */
+.strat{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:820px){.strat{grid-template-columns:1fr}}
+.route{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.users{font-size:28px;text-align:center}
+.vers{display:flex;flex-direction:column;gap:8px}
+.ver{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper)}
+.ver .hd{display:flex;justify-content:space-between;font:600 13px var(--sans)}
+.ver .pct{font:600 13px var(--mono)}
+.ver .bar{height:10px}
+.ver.off{opacity:.45}
+/* dashboard */
+.dash{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:820px){.dash{grid-template-columns:1fr 1fr}}
+.tile{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:8px 10px;min-width:0}
+.tile .l{font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tile .v{font:700 20px var(--sans);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.bad{border-color:#fca5a5;background:#fef2f2}.tile.bad .v{color:var(--err)}
+.tile.warn{border-color:#fcd34d;background:#fffbeb}.tile.warn .v{color:var(--warn)}
+.tile.good .v{color:var(--ok)}
+.tile.wide{grid-column:span 2}
+@media (max-width:820px){.tile.wide{grid-column:span 2}}
+/* recipes */
+.recipes{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.recipes{grid-template-columns:1fr}}
+.recipe .tags{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.recipe .tags span{font:500 11px var(--mono);background:#f0fdfa;border:1px solid #a7ece0;color:#115e59;border-radius:5px;padding:1px 6px}
+.recipe pre{font:12.5px/1.55 var(--mono);background:var(--term);color:var(--term-ink);border-radius:9px;padding:10px 12px;overflow-x:auto;margin:8px 0;white-space:pre}
+.recipe .row2{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.recipe .gotcha{font-size:13.5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:8px}
+.recipe ol{padding-left:20px;margin:6px 0;font-size:14.5px}
+/* checklist */
+.chk{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.chk{grid-template-columns:1fr}}
+.chk h3{font-size:16px}
+.chk label{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;padding:5px 0;cursor:pointer}
+.chk input{margin-top:4px;accent-color:var(--teal)}
+.lvl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.lvl div{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);font-size:13.5px}
+.lvl div b{display:block;font-size:15px}
+.lvl div.on{border-color:var(--teal);background:#f0fdfa;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+@media (max-width:640px){.lvl{grid-template-columns:1fr}}
+/* charts */
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.sliders{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:700px){.sliders{grid-template-columns:1fr}}
+.sliders label{font-size:13.5px;display:block}
+.sliders input{width:100%;accent-color:var(--docker)}
+.verdict{font-weight:600;padding:10px 14px;border-radius:10px;margin-top:10px;font-size:15px}
+.verdict.ok{background:#f0fbf4;color:var(--ok);border:1px solid #a7e3bf}
+.verdict.warn{background:#fffbeb;color:var(--warn);border:1px solid #fcd34d}
+.verdict.bad{background:#fef2f2;color:var(--err);border:1px solid #fca5a5}
+.logline{font:12.5px/1.6 var(--mono);background:var(--term);color:var(--term-ink);border-radius:10px;padding:12px 14px;white-space:pre-wrap;word-break:break-all;min-height:60px}
+.warnlist{margin:10px 0 0;padding-left:0;list-style:none;font-size:14px}
+.warnlist li{padding:4px 0}
+.ckgrid{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0}
+.ckgrid label{font:500 13px var(--mono);display:flex;gap:6px;align-items:center;cursor:pointer}
+.relgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
+.relgrid i{height:26px;border-radius:5px;background:#e5e3dc;display:flex;align-items:center;justify-content:center;font:600 11px var(--mono);color:#fff;font-style:normal}
+.relgrid i.ok{background:#16a34a}.relgrid i.bad{background:#dc2626}.relgrid i.caught{background:#d97706}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="topbar">
+    <div class="brand"><span class="tag">Playground</span>MLOps · Monitoring, Logging &amp; Best Practices</div>
+    <div class="pct"><span id="pct">0%</span> · Contents</div>
+  </div>
+  <nav class="toc" id="toc">
+    <a href="#s1"><b>01</b>Silent failure</a>
+    <a href="#s2"><b>02</b>What to monitor</a>
+    <a href="#s3"><b>03</b>Drift lab</a>
+    <a href="#s4"><b>04</b>Logging</a>
+    <a href="#s5"><b>05</b>Observability lab</a>
+    <a href="#s6"><b>06</b>SLOs &amp; alerts</a>
+    <a href="#s7"><b>07</b>Cookbooks</a>
+    <a href="#s8"><b>08</b>Best practices</a>
+    <a href="#s9"><b>09</b>Command reference</a>
+    <a href="#s10"><b>10</b>Which command?</a>
+    <a href="#s11"><b>11</b>Activities</a>
+    <a href="#s12"><b>12</b>Takeaways</a>
+  </nav>
+  <div class="progress" id="bar"></div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">Session · Model Monitoring and Logging · Cookbooks · Best Practices in MLOps</div>
+  <h1>Keep models honest in production</h1>
+  <p>A deployed model doesn't crash when the world changes; it just gets quietly worse. Learn what to measure, how to log predictions so you can debug them, how to detect drift and alert on it, and the recipes and habits that keep ML systems healthy. The terminal and every widget run in your browser.</p>
+  <div class="pills"><span class="pill">1 live terminal · 3 scenarios</span><span class="pill">drift &amp; SLO calculators</span><span class="pill">9 cookbook recipes</span><span class="pill">maturity self-check</span></div>
+</div>
+
+<!-- 01 -->
+<section id="s1">
+  <div class="eyebrow">01 · Why this exists</div>
+  <h2>Models fail silently</h2>
+  <p class="lede">Twenty weeks of an iris-api model in production. In week 9 an upstream team starts sending petal measurements in millimetres instead of centimetres. Look at only the system metrics first, then add the model metrics.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="labtag">Lab · what your dashboard shows</div>
+    <div class="btnrow" style="margin-bottom:10px"><div class="toggle" id="sfTog"><button data-v="sys" class="on">System metrics only</button><button data-v="all">+ Model metrics</button></div></div>
+    <div class="chart" id="sfChart"></div>
+    <div class="legend" id="sfLegend"></div>
+    <div class="callout amber" id="sfNote" style="margin-bottom:0"></div>
+  </div>
+</section>
+
+<!-- 02 -->
+<section id="s2">
+  <div class="eyebrow">02 · Coverage</div>
+  <h2>What to monitor: four layers</h2>
+  <p class="lede">Classic monitoring covers the bottom layer. ML needs all four, because each catches failures the others can't see.</p>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card"><div class="labtag">Layer 1 · system / service</div><h3>Is it up and fast?</h3><p class="small">Latency (p50/p95/p99), throughput, error rate, saturation (CPU, memory, GPU, queue depth). The "golden signals". Tools: Prometheus, Grafana, Datadog, CloudWatch.</p></div>
+    <div class="card"><div class="labtag">Layer 2 · data</div><h3>Is the input what the model expects?</h3><p class="small">Schema violations, missing values, out-of-range values, new categories, and distribution shift between training and live data (<b>data drift</b>). Tools: Evidently, Great Expectations, WhyLabs, NannyML.</p></div>
+    <div class="card"><div class="labtag">Layer 3 · model</div><h3>Is it still right?</h3><p class="small">Prediction distribution and confidence, and, once ground-truth labels arrive, accuracy / F1 / calibration (<b>concept drift</b> shows up here). When labels are delayed, watch proxies such as prediction drift and confidence.</p></div>
+    <div class="card"><div class="labtag">Layer 4 · business</div><h3>Is it still useful?</h3><p class="small">The outcome the model exists for: approved loans that default, fraud caught, click-through, revenue per recommendation. This is where a "technically fine" model can still be failing.</p></div>
+  </div>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th>Kind of drift</th><th>What changes</th><th>Example</th><th>How you notice</th></tr>
+    <tr><td><b>Data (covariate) drift</b></td><td>The input distribution P(X)</td><td>A new customer segment, a sensor recalibrated, cm → mm</td><td>Compare feature distributions: PSI, KS test, Wasserstein</td></tr>
+    <tr><td><b>Concept drift</b></td><td>The relationship P(y | X)</td><td>Fraudsters change tactics; the same features now mean something else</td><td>Accuracy drops once labels arrive; inputs may look normal</td></tr>
+    <tr><td><b>Label / prior drift</b></td><td>The class balance P(y)</td><td>Seasonal spike in one class</td><td>Prediction distribution shifts; calibration degrades</td></tr>
+    <tr><td><b>Training-serving skew</b></td><td>Features computed differently online vs offline</td><td>Training used a 30-day average; the API sends a 7-day one</td><td>Log served features and compare them with offline features for the same IDs</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s3">
+  <div class="eyebrow g">03 · Data drift</div>
+  <h2>Drift lab: reference vs production</h2>
+  <p class="lede">Grey is the training (reference) distribution of <code>petal_length</code>; blue is this week's production data. Move the sliders or pick a preset, and watch the two most common drift statistics react.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="chiprow" id="driftPresets"></div>
+    <div class="sliders">
+      <label>Mean shift: <b id="dShiftV">0</b> cm<input type="range" id="dShift" min="-2" max="2" step="0.05" value="0"></label>
+      <label>Spread ×<b id="dScaleV">1.00</b><input type="range" id="dScale" min="0.5" max="2" step="0.05" value="1"></label>
+      <label>Missing values: <b id="dMissV">0</b>%<input type="range" id="dMiss" min="0" max="40" step="1" value="0"></label>
+    </div>
+    <div class="chart" id="driftChart" style="margin-top:12px"></div>
+    <div class="legend"><span><i style="background:#9ca3af"></i>reference (training, n=2,000)</span><span><i style="background:#1d63ed"></i>production (this week, n=2,000)</span></div>
+    <div class="facts" id="driftFacts"></div>
+    <div class="verdict" id="driftVerdict"></div>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><h3>PSI</h3><p class="small">Population Stability Index: bins the reference into deciles and sums (cur − ref) × ln(cur / ref). Rules of thumb: <b>&lt; 0.1</b> stable, <b>0.1–0.25</b> moderate shift, <b>&gt; 0.25</b> significant.</p></div>
+    <div class="card"><h3>KS test</h3><p class="small">Kolmogorov–Smirnov: largest gap between the two cumulative distributions, with a p-value. With thousands of rows, even tiny, harmless shifts become "significant", so read the size of D, not just p.</p></div>
+    <div class="card"><h3>Drift ≠ bad model</h3><p class="small">Drift is a <i>signal to look</i>, not proof of failure. Confirm with performance once labels arrive, check which features matter most to the model, and fix upstream bugs before retraining on broken data.</p></div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s4">
+  <div class="eyebrow">04 · Logging</div>
+  <h2>Logging predictions you can actually use</h2>
+  <p class="lede">Logs are how you answer "why did the model say that, for whom, and which version?" weeks later. Build a prediction log line and see what each field buys you, or costs you.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="labtag">Lab · design a prediction log</div>
+    <div class="btnrow" style="margin-bottom:8px"><div class="toggle" id="logFmt"><button data-f="json" class="on">Structured (JSON)</button><button data-f="text">Unstructured text</button></div></div>
+    <div class="ckgrid" id="logFields"></div>
+    <div class="logline" id="logLine"></div>
+    <ul class="warnlist" id="logWarn"></ul>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><h3>Levels</h3><p class="small"><code>DEBUG</code> for development, <code>INFO</code> for each prediction or request summary, <code>WARNING</code> for degraded-but-served (fallback model, slow), <code>ERROR</code> for failed requests. Alert on rates, not individual lines.</p></div>
+    <div class="card"><h3>Correlate</h3><p class="small">Generate a <code>request_id</code> (or OpenTelemetry <code>trace_id</code>) at the edge and pass it through every service. One ID then finds the gateway, feature store and model logs for a single request.</p></div>
+    <div class="card"><h3>Cost &amp; privacy</h3><p class="small">Never log raw PII; hash or drop it. Sample high-volume INFO logs (e.g. 10%) but keep 100% of errors. Set retention by purpose: debug logs for days, prediction logs for drift/audit as long as policy allows.</p></div>
+  </div>
+</section>
+
+<!-- 05 -->
+<section id="s5">
+  <div class="eyebrow">05 · Hands-on</div>
+  <h2>Lab: the observability terminal</h2>
+  <p class="lede">You're on call for <code>iris-api</code>. The terminal has its logs (as JSON lines), a Prometheus server, Alertmanager and a drift-report script. Pipes work: <code>jq … | sort | uniq -c</code>. The dashboard below the terminal updates live.</p>
+  <div id="obsLab"></div>
+</section>
+
+<!-- 06 -->
+<section id="s6">
+  <div class="eyebrow">06 · Alerting</div>
+  <h2>SLOs, error budgets and alerts that matter</h2>
+  <p class="lede">An <b>SLI</b> is a measurement (share of requests answered OK in &lt; 300 ms). An <b>SLO</b> is the target for it (99.9% over 30 days). The gap to 100% is your <b>error budget</b>. Alert when you're burning it too fast, not on every blip.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="labtag">Lab · error budget calculator</div>
+    <div class="sliders">
+      <label>SLO target<select id="sloT" style="width:100%;padding:6px;border-radius:8px;border:1px solid var(--line);font:inherit;margin-top:4px"><option value="0.99">99%</option><option value="0.995">99.5%</option><option value="0.999" selected>99.9%</option><option value="0.9995">99.95%</option><option value="0.9999">99.99%</option></select></label>
+      <label>Requests per 30 days: <b id="sloRV">10.0M</b><input type="range" id="sloR" min="1" max="200" value="10"></label>
+      <label>Current error rate: <b id="sloEV">0.50</b>%<input type="range" id="sloE" min="0" max="5" step="0.01" value="0.5"></label>
+    </div>
+    <div class="facts" id="sloFacts"></div>
+    <div class="verdict" id="sloVerdict"></div>
+  </div>
+  <div class="grid2" style="margin-top:16px">
+    <div class="card"><h3>Good alerts</h3><ul class="small" style="padding-left:18px;margin:0"><li>Fire on <b>symptoms</b> users feel (errors, latency, bad predictions), not causes (CPU 80%).</li><li>Use a <code>for:</code> duration or multi-window burn rates to skip blips.</li><li>Every page links to a runbook with the first three things to check.</li><li>Ticket-level alerts (slow drift, budget trending down) go to a queue, not a pager.</li></ul></div>
+    <div class="card"><h3>ML-specific alerts</h3><ul class="small" style="padding-left:18px;margin:0"><li>PSI &gt; 0.25 on a top-5 important feature for 1 day</li><li>Missing-value rate on any required feature &gt; 5%</li><li>Prediction class mix shifts &gt; 20% vs last 4 weeks</li><li>Labelled accuracy below SLO on the latest complete window</li><li>Model version in production ≠ version in the registry's <code>@champion</code></li></ul></div>
+  </div>
+</section>
+
+<!-- 07 -->
+<section id="s7">
+  <div class="eyebrow v">07 · Cookbooks</div>
+  <h2>MLOps cookbook</h2>
+  <p class="lede">Short, repeatable recipes for situations every ML team hits. Each has the steps, the commands and the gotcha that bites people. Filter by kind of problem.</p>
+  <div class="chiprow" id="recFilter"></div>
+  <div class="recipes" id="recipes"></div>
+</section>
+
+<!-- 08 -->
+<section id="s8">
+  <div class="eyebrow g">08 · Best practices</div>
+  <h2>Best practices &amp; a maturity self-check</h2>
+  <p class="lede">Google's MLOps maturity model describes three levels: <b>0</b> manual process, <b>1</b> automated ML pipeline (continuous training), <b>2</b> automated CI/CD of the pipeline itself. Tick what your team does today.</p>
+  <div class="lvl" id="lvl">
+    <div data-l="0"><b>Level 0 · Manual</b>Notebooks, hand-run training, manual hand-off to engineers, rare releases, little monitoring.</div>
+    <div data-l="1"><b>Level 1 · ML pipeline automation</b>Orchestrated, reproducible training; continuous training on new data; registry; monitoring triggers retraining.</div>
+    <div data-l="2"><b>Level 2 · CI/CD automation</b>Pipeline code itself is tested and deployed by CI/CD; many models; fast, safe, frequent iteration.</div>
+  </div>
+  <div class="card"><div class="row2" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><b id="matScore">0 / 24</b> practices · <span id="matLevel" class="muted"></span></div><button class="btn ghost" id="matReset">Clear</button></div><div class="bar" style="margin-top:8px"><i class="ct" id="matBar" style="width:0"></i></div><div id="matNext" class="small" style="margin-top:10px"></div></div>
+  <div class="chk" id="chk" style="margin-top:16px"></div>
+  <h3 style="margin-top:30px">Common anti-patterns</h3>
+  <div class="grid3">
+    <div class="card"><h3>“Works in my notebook”</h3><p class="small">Training only reproducible on one laptop. Fix: pipelines as code, pinned environments, versioned data.</p></div>
+    <div class="card"><h3>Train/serve skew</h3><p class="small">Features recomputed differently in the API. Fix: one feature library or a feature store used by both paths, plus a parity test.</p></div>
+    <div class="card"><h3>Deploy and forget</h3><p class="small">No model-level monitoring; issues found by customers. Fix: four-layer monitoring and owned alerts with runbooks.</p></div>
+    <div class="card"><h3>Retrain on a timer, blindly</h3><p class="small">Auto-retrain on broken upstream data and ship it. Fix: data validation and champion/challenger gates before any automatic promotion.</p></div>
+    <div class="card"><h3>Untracked experiments</h3><p class="small">“Which params made the good model?” Fix: log every run (MLflow / W&amp;B), register what ships.</p></div>
+    <div class="card"><h3>Pager fatigue</h3><p class="small">Alerts on every metric twitch get muted. Fix: SLO-based alerts, symptom-first, with severity levels.</p></div>
+  </div>
+</section>
+
+<!-- 09 -->
+<section id="s9">
+  <div class="eyebrow">09 · Cheat sheet</div>
+  <h2>Command reference</h2>
+  <p class="lede">Search by name or purpose, for example “errors”, “p95”, “drift” or “alerts”.</p>
+  <div class="refbar"><input id="refQ" type="search" placeholder="Search commands or purpose…" aria-label="Search commands"><div class="btnrow" id="refCats"></div></div>
+  <div class="scrollx"><table class="tbl ref" id="refTbl"></table></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <div class="eyebrow">10 · Check yourself</div>
+  <h2>Which command?</h2>
+  <div class="card quiz" id="quiz" style="margin-top:18px"></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <div class="eyebrow">11 · Practice</div>
+  <h2>Activities</h2>
+  <p class="lede">Do these in the labs above, then design the same for a model you work on. Tick each off as you go.</p>
+  <div class="acts" id="acts" style="margin-top:18px"></div>
+</section>
+
+<!-- 12 -->
+<section id="s12">
+  <div class="eyebrow">12 · Wrap-up</div>
+  <h2>Key takeaways</h2>
+  <ol class="takeaways">
+    <li><b>Models degrade silently.</b> Green system dashboards say nothing about whether predictions are still right.</li>
+    <li><b>Monitor four layers:</b> system, data, model and business. Each catches failures the others miss.</li>
+    <li><b>Drift is a signal, not a verdict.</b> PSI and KS tell you <i>where</i> to look; labels and business metrics tell you whether it matters.</li>
+    <li><b>Log structured, correlated, privacy-safe events</b> with model version, request ID, features and prediction for every request.</li>
+    <li><b>Alert on symptoms and SLO burn rate,</b> with a <code>for:</code> window and a runbook. Fewer, better alerts.</li>
+    <li><b>Close the loop:</b> drift or performance alerts trigger a gated retraining pipeline, and the result goes out by canary.</li>
+    <li><b>Write recipes down.</b> Rollback, reproduce, shadow-test and debug playbooks turn incidents into routine.</li>
+    <li><b>Grow maturity step by step:</b> reproducibility and tracking first, then pipelines and monitoring, then full CI/CD of the pipeline.</li>
+  </ol>
+  <h3 style="margin-top:34px">Glossary</h3>
+  <dl class="gloss">
+    <dt>Observability</dt><dd>Being able to explain a system's behaviour from its outputs: metrics, logs and traces.</dd>
+    <dt>Metric / log / trace</dt><dd>Numbers over time (cheap, aggregated) / individual events (detailed) / a request's path across services.</dd>
+    <dt>p95 latency</dt><dd>95% of requests were faster than this. Tails matter more than averages.</dd>
+    <dt>Data drift</dt><dd>Change in the distribution of model inputs compared with training data.</dd>
+    <dt>Concept drift</dt><dd>Change in the relationship between inputs and the correct output.</dd>
+    <dt>PSI</dt><dd>Population Stability Index, a binned measure of distribution shift.</dd>
+    <dt>KS statistic</dt><dd>Maximum distance between two cumulative distributions.</dd>
+    <dt>Ground truth delay</dt><dd>Time until the true label is known (minutes for clicks, months for loan default).</dd>
+    <dt>SLI / SLO / SLA</dt><dd>What you measure / the target you set / the contractual promise to a customer.</dd>
+    <dt>Error budget</dt><dd>The amount of unreliability an SLO allows (1 − SLO) over a window.</dd>
+    <dt>Burn rate</dt><dd>How fast the error budget is being consumed relative to plan (1× = exactly on budget).</dd>
+    <dt>Runbook</dt><dd>Step-by-step instructions for responding to a specific alert.</dd>
+    <dt>Feature store</dt><dd>Shared system that computes and serves features consistently for training and serving.</dd>
+    <dt>Continuous training</dt><dd>Automatically retraining and validating a model when triggered by data, schedule or alerts.</dd>
+  </dl>
+</section>
+</main>
+
+<footer>The labs on this page simulate logs, Prometheus, Alertmanager, a drift-report job and GitHub Actions in your browser for teaching. Data is synthetic, nothing is installed, and nothing is sent anywhere.</footer>
+
+<script>
+/* ============ utilities ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const rnd=(chars,n)=>Array.from({length:n},()=>chars[Math.random()*chars.length|0]).join('');
+const hex=n=>rnd('0123456789abcdef',n);
+const kid=n=>rnd('bcdfghjklmnpqrstvwxz2456789',n);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function table(rows,gap=3){const w=[];rows.forEach(r=>r.forEach((c,i)=>w[i]=Math.max(w[i]||0,String(c).length)));return rows.map(r=>r.map((c,i)=>i===r.length-1?String(c):String(c).padEnd(w[i]+gap)).join('')).join('\n')}
+function tokenize(s){const out=[];const re=/"([^"]*)"|'([^']*)'|(\S+)/g;let m;while((m=re.exec(s)))out.push(m[1]!==undefined?m[1]:m[2]!==undefined?m[2]:m[3]);return out}
+function ago(t){const s=Math.max(1,Math.round((Date.now()-t)/1000));if(s<60)return s+' seconds';const m=Math.round(s/60);return m===1?'About a minute':m+' minutes'}
+function kage(t){const s=Math.max(0,Math.round((Date.now()-t)/1000));if(s<120)return s+'s';return Math.round(s/60)+'m'}
+function nginxTime(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+function clfTime(){const d=new Date();const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];const p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${mo}/${d.getFullYear()}:${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} +0000`}
+const norm=r=>{if(!r)return r;const last=r.split('/').pop();return last.includes(':')?r:r+':latest'};
+const splitRef=r=>{const i=r.lastIndexOf(':');return [r.slice(0,i),r.slice(i+1)]};
+const short=r=>r.endsWith(':latest')?r.slice(0,-7):r;
+function KIND(img){const b=img.split(':')[0].split('/').pop();if(b==='hello-world')return'hello';if(b==='nginx'||b==='httpd')return'web';if(b==='redis')return'redis';if(b.includes('iris-api')||b==='app-api')return'api';if(b==='postgres')return'db';return'shell'}
+function parseArgs(arr,valueFlags){const pos=[],f={};let rest=null;for(let i=0;i<arr.length;i++){const x=arr[i];if(x==='--'){rest=arr.slice(i+1);break}
+  if(x.startsWith('--')){const eq=x.indexOf('=');if(eq>0)f[x.slice(2,eq)]=x.slice(eq+1);else{const k=x.slice(2);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}}
+  else if(x.startsWith('-')&&x.length>1){const k=x.slice(1);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}
+  else pos.push(x)}return{pos,f,rest}}
+
+/* ============ Terminal ============ */
+class Terminal{
+  constructor(root,{prompt,name,onCommand,after}){
+    root.innerHTML=`<div class="t-bar"><i></i><i></i><i></i><span class="t-name">${esc(name)}</span></div><div class="t-body"><div class="t-out"></div><div class="t-line"><span class="t-prompt"></span><input class="t-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal input" enterkeyhint="send"></div></div>`;
+    this.root=root;this.body=$('.t-body',root);this.out=$('.t-out',root);this.inp=$('.t-in',root);this.pr=$('.t-prompt',root);
+    this.onCommand=onCommand;this.after=after;this.hist=[];this.hi=0;this.mode=null;this.setPrompt(prompt);
+    this.inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();const v=this.inp.value;this.inp.value='';this.run(v)}
+      else if(e.key==='ArrowUp'){if(this.hi>0){this.hi--;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='ArrowDown'){if(this.hi<this.hist.length){this.hi++;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='l'&&e.ctrlKey){e.preventDefault();this.clear()}
+    });
+    this.body.addEventListener('click',()=>{if(!String(window.getSelection&&window.getSelection()))this.inp.focus({preventScroll:true})});
+  }
+  setPrompt(p){this.prompt=p;this.pr.textContent=p}
+  print(text,cls=''){String(text).split('\n').forEach(line=>{const d=document.createElement('div');d.className='ln '+cls;d.textContent=line===''?' ':line;this.out.appendChild(d)});this.scroll()}
+  scroll(){this.body.scrollTop=this.body.scrollHeight}
+  clear(){this.out.innerHTML=''}
+  run(raw){const cmd=String(raw).trim();const d=document.createElement('div');d.className='ln cmd';const p=document.createElement('span');p.className='p';p.textContent=this.prompt;d.append(p,document.createTextNode(cmd));this.out.appendChild(d);
+    if(!cmd){this.scroll();return}this.hist.push(cmd);this.hi=this.hist.length;let ok;
+    try{ok=this.mode?this.mode(cmd,this):this.onCommand(cmd,this)}catch(e){this.print('playground error: '+e.message,'err');console.error(e);ok=false}
+    this.scroll();if(this.after)this.after(cmd,ok)}
+}
+
+/* ============ Lab controller ============ */
+function makeLab(mount,cfg){
+  mount.innerHTML=`<div class="lab ${cfg.cls||''}">
+   <div class="lab-head"><div><div class="lab-title">${cfg.title}</div><div class="scen-desc"></div></div><div class="lab-actions"><span class="step-prog"></span><button class="btn ghost reset">↺ Start again</button></div></div>
+   <div class="scen-tabs"></div>
+   <div class="lab-grid">
+     <aside class="guide"><details open class="steps"><summary>Steps · click a command to run it</summary><ol></ol></details>
+       <details open class="try"><summary>Try these on purpose</summary><ul></ul></details></aside>
+     <div class="work"><div class="term"></div>
+       <div class="suggest"><span>Suggested next commands · click one or type your own</span><div class="chips"></div></div>
+       <div class="extra"></div><div class="viz"></div></div>
+   </div></div>`;
+  const root=mount.firstElementChild,sim=cfg.sim;
+  const tabs=$('.scen-tabs',root),stepsEl=$('.steps ol',root),tryEl=$('.try ul',root),chips=$('.chips',root),viz=$('.viz',root),prog=$('.step-prog',root),desc=$('.scen-desc',root);
+  let cur=0,done=new Set(),celebrated=false;
+  const term=new Terminal($('.term',root),{prompt:cfg.prompt,name:cfg.termName,onCommand:(c,t)=>sim.handle(c,t),after:(c,ok)=>check(c,ok)});
+  sim.onChange=()=>{sim.render(viz);renderSteps()};
+  if(cfg.extra)cfg.extra($('.extra',root),term);
+  cfg.scenarios.forEach((s,i)=>{const b=document.createElement('button');b.className='tab';b.innerHTML=`<span>Scenario ${'ABCDEF'[i]}</span>${esc(s.title)}`;b.onclick=()=>load(i);tabs.appendChild(b)});
+  $('.reset',root).onclick=()=>load(cur);
+  const stepCmd=st=>typeof st.cmd==='function'?st.cmd(sim):st.cmd;
+  function load(i){cur=i;done=new Set();celebrated=false;term.mode=null;term.setPrompt(cfg.prompt);term.clear();const s=cfg.scenarios[i];
+    sim.reset(s);[...tabs.children].forEach((b,j)=>b.classList.toggle('on',j===i));desc.textContent=s.desc;term.print(s.intro,'dim');
+    tryEl.innerHTML='';s.tryThese.forEach(tt=>{const li=document.createElement('li');const b=document.createElement('button');b.className='cmdchip';b.textContent=tt.cmd;b.onclick=()=>term.run(tt.cmd);const n=document.createElement('div');n.className='note';n.innerHTML=tt.why;li.append(b,n);tryEl.appendChild(li)});
+    renderSteps();sim.render(viz)}
+  function renderSteps(){const s=cfg.scenarios[cur];const next=s.steps.findIndex((_,i)=>!done.has(i));stepsEl.innerHTML='';
+    s.steps.forEach((st,i)=>{const li=document.createElement('li');li.className=(done.has(i)?'done':'')+(i===next?' next':'');const b=document.createElement('button');b.className='cmdchip';const txt=stepCmd(st);b.textContent=txt;b.onclick=()=>term.run(stepCmd(st));const n=document.createElement('div');n.className='note';n.innerHTML=st.note;li.append(b,n);stepsEl.appendChild(li)});
+    prog.textContent=`${done.size} / ${s.steps.length} steps`;
+    chips.innerHTML='';const sug=[];s.steps.forEach((st,i)=>{if(!done.has(i)&&sug.length<2)sug.push(stepCmd(st))});
+    if(term.mode&&!sug.includes('exit'))sug.push('exit');sug.push('help','clear');
+    sug.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.onclick=()=>term.run(c);chips.appendChild(b)})}
+  function check(c,ok){if(ok===false){renderSteps();return}const s=cfg.scenarios[cur];const n=c.trim().replace(/\s+/g,' ');
+    const i=s.steps.findIndex((st,j)=>!done.has(j)&&st.match.test(n));if(i>=0)done.add(i);renderSteps();
+    if(done.size===s.steps.length&&!celebrated){celebrated=true;term.print('✔ Scenario complete! Try the "Try these on purpose" commands, or pick the next scenario.','ok')}}
+  load(0);return{term,load};
+}
+
+
+
+/* ============ shared helpers for the MLOps playgrounds ============ */
+/* split a command line on a separator ("&&" or "|") outside quotes */
+function splitTop(s,sep){const out=[];let cur='',q=null;for(let i=0;i<s.length;i++){const ch=s[i];
+  if(q){cur+=ch;if(ch===q)q=null;continue}
+  if(ch==='"'||ch==="'"){q=ch;cur+=ch;continue}
+  if(s.startsWith(sep,i)&&!(sep==='|'&&(s[i+1]==='|'||s[i-1]==='|'))){out.push(cur.trim());cur='';i+=sep.length-1;continue}
+  cur+=ch}out.push(cur.trim());return out.filter(x=>x!=='')}
+/* run "a && b && c": stop at the first failure */
+function runChain(raw,t,one){const parts=splitTop(raw,'&&');let ok=true;for(const p of parts){ok=one(p,t);if(ok===false)return false}return ok}
+/* deterministic random numbers */
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+/* print lines one after another (for streaming output); returns a cancel fn */
+function streamLines(t,items,isAlive,done){let i=0,stop=false;const next=()=>{if(stop||!isAlive())return;if(i>=items.length){if(done)done();return}const it=items[i++];t.print(it.text,it.cls||'');setTimeout(next,it.delay==null?350:it.delay)};next();return()=>{stop=true}}
+/* small editable file helpers: sed -i 's/a/b/[g]' file */
+function applySed(expr,content){const m=/^s(.)(.*?)\1(.*?)\1(g?)$/.exec(expr);if(!m)return null;const from=m[2],to=m[3];
+  if(m[4])return content.split(from).join(to);const i=content.indexOf(from);return i<0?content:content.slice(0,i)+to+content.slice(i+from.length)}
+
+function renderReference(R,cats){const tbl=$('#refTbl'),q=$('#refQ'),cb=$('#refCats');let cat='all';
+  ['all'].concat(cats).forEach(c=>{const b=document.createElement('button');b.className='fchip'+(c==='all'?' on':'');b.textContent=c;b.onclick=()=>{cat=c;$$('.fchip',cb).forEach(x=>x.classList.toggle('on',x===b));draw()};cb.appendChild(b)});
+  function draw(){const s=q.value.toLowerCase().trim();const rows=R.filter(r=>(cat==='all'||r[0]===cat)&&(!s||(r[1]+' '+r[2]).toLowerCase().includes(s)));
+    tbl.innerHTML='<tr><th>Command</th><th>Purpose</th><th class="cathead">Tool</th></tr>'+(rows.length?rows.map(r=>`<tr><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td><td class="catcell"><span class="cat">${esc(r[0])}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">No matches.</td></tr>')}
+  q.oninput=draw;draw()}
+
+function renderQuiz(Q){let i=0,score=0;const ans={};const el=$('#quiz');
+  function draw(){const q=Q[i];el.innerHTML=`<div class="qhead"><span>Question ${i+1} of ${Q.length}</span><span>Score: ${score}/${Object.keys(ans).length}</span></div><div class="qtext">${q[0]}</div><div class="opts">${q[1].map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}</div><div class="qexp"></div><div class="qnav"><button class="btn ghost" id="qPrev" ${i===0?'disabled':''}>← Previous</button><button class="btn" id="qNext">${i===Q.length-1?'Restart':'Next →'}</button></div>`;
+    const show=j=>{$$('.opt',el).forEach((b,k)=>{b.disabled=true;if(k===q[2])b.classList.add('right');else if(k===j)b.classList.add('wrong')});$('.qexp',el).innerHTML=(j===q[2]?'<b style="color:var(--ok)">Correct.</b> ':'<b style="color:var(--err)">Not quite.</b> ')+q[3]};
+    if(i in ans)show(ans[i]);
+    $$('.opt',el).forEach(b=>b.onclick=()=>{const j=+b.dataset.j;ans[i]=j;if(j===q[2])score++;show(j);$('.qhead span:last-child',el).textContent=`Score: ${score}/${Object.keys(ans).length}`});
+    $('#qPrev').onclick=()=>{i--;draw()};$('#qNext').onclick=()=>{if(i===Q.length-1){i=0;score=0;for(const k in ans)delete ans[k]}else i++;draw()}}
+  draw()}
+
+function renderActivities(A){const el=$('#acts');A.forEach((a,i)=>{const d=document.createElement('div');d.className='card act';d.innerHTML=`<div class="num">ACTIVITY ${String(i+1).padStart(2,'0')} · ${a[1]}</div><h3>${a[0]}</h3><ol>${a[2].map(s=>`<li>${s}</li>`).join('')}</ol><label><input type="checkbox"> Done</label>`;$('input',d).onchange=e=>d.classList.toggle('done',e.target.checked);el.appendChild(d)})}
+
+function initToc(){const bar=$('#bar'),pct=$('#pct'),links=$$('#toc a');
+  function onScroll(){const h=document.documentElement;const p=Math.round(h.scrollTop/Math.max(1,h.scrollHeight-h.clientHeight)*100);bar.style.width=p+'%';pct.textContent=p+'%';
+    let cur=null;$$('main section').forEach(s=>{if(s.getBoundingClientRect().top<140)cur=s.id});links.forEach(a=>{const on=a.getAttribute('href')==='#'+cur;if(on&&!a.classList.contains('on')){a.classList.add('on');a.scrollIntoView({block:'nearest',inline:'center'})}else if(!on)a.classList.remove('on')})}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll()}
+
+function copyBtn(btn,text){btn.onclick=async()=>{try{await navigator.clipboard.writeText(text);btn.textContent='Copied ✓'}catch(e){btn.textContent='Select & copy manually'}setTimeout(()=>btn.textContent='Copy',1600)}}
+
+/* sparkline svg from numbers */
+function sparkSVG(vals,w,h,color,maxV){if(!vals.length)return '';const mx=maxV||Math.max(...vals)*1.15||1;const pts=vals.map((v,i)=>`${(i/(Math.max(1,vals.length-1))*w).toFixed(1)},${(h-v/mx*h).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="2" points="${pts}"/></svg>`}
+
+
+/* =====================================================================
+   PAGE 2 · Monitoring, logging, cookbooks & best practices
+   ===================================================================== */
+
+/* ---------------- synthetic logs ---------------- */
+const LOGS=(function(){const r=mulberry(7);const P=[],G=[];let t=Date.UTC(2026,10,18,14,0,0);
+  const cls=['setosa','versicolor','virginica'];const pad=n=>String(n).padStart(2,'0');
+  const iso=ms=>new Date(ms).toISOString().replace(/\.\d+Z$/,'.'+String(ms%1000).padStart(3,'0')+'Z');
+  for(let i=0;i<240;i++){t+=5000+Math.floor(r()*5000);const id='req-'+Math.floor(r()*0xffffff).toString(16).padStart(6,'0');const c=Math.floor(r()*3);
+    const f={sepal_length:+(4.6+r()*2.8).toFixed(1),sepal_width:+(2.2+r()*2).toFixed(1),petal_length:+([1.4,4.3,5.6][c]+(r()-0.5)*0.8).toFixed(1),petal_width:+([0.2,1.3,2.0][c]+(r()-0.5)*0.4).toFixed(1)};
+    let v=i<140?'2.0':(r()<0.3?'2.1':'2.0');let rid=id;if(i===201){v='2.1';rid='req-7f3a2b'}
+    const err=v==='2.1'&&(i===201||r()<0.33);const slow=v==='2.0'&&[37,96,188].includes(i);
+    const lat=err?Math.round(4+r()*4):slow?Math.round(820+r()*400):Math.round(8+r()*14+(v==='2.1'?-2:0));
+    const rec={ts:iso(t),level:err?'ERROR':slow?'WARNING':'INFO',service:'iris-api',request_id:rid,model_version:v,latency_ms:lat};
+    if(err){f.petal_width=null;rec.prediction=null;rec.error='ValueError: Input X contains NaN.';rec.msg='prediction failed'}
+    else{rec.prediction=cls[c];rec.proba=+(0.82+r()*0.17).toFixed(2);rec.msg=slow?'slow request':'prediction served'}
+    rec.features=f;P.push(JSON.stringify(rec));
+    const g={ts:iso(t+lat+1),level:err?'ERROR':'INFO',service:'gateway',request_id:rid,method:'POST',path:'/predict',upstream:'iris-api',status:err?502:200,duration_ms:lat+3};
+    if(err){G.push(JSON.stringify({ts:iso(t+1),level:'WARNING',service:'gateway',request_id:rid,msg:'upstream returned 500, retrying',attempt:1}));G.push(JSON.stringify({ts:iso(t+4),level:'WARNING',service:'gateway',request_id:rid,msg:'upstream returned 500, giving up',attempt:2}))}
+    G.push(JSON.stringify(g))}
+  return{'logs/predictions.jsonl':P,'logs/gateway.jsonl':G}})();
+const FILES2={
+'alerts.yml':`groups:
+  - name: iris-api
+    rules:
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m                      # compressed to 2 s in this playground
+        labels: { severity: page }
+        annotations:
+          summary: "p95 latency above 500ms for 5m"
+          runbook: https://wiki.example.com/runbooks/iris-api-latency
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.01
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "More than 1% of requests failing"
+      - alert: DataDrift
+        expr: max(feature_psi) > 0.25    # pushed by the nightly drift job
+        for: 1h
+        labels: { severity: ticket }      # a ticket, not a 3 a.m. page
+        annotations:
+          summary: "PSI above 0.25 on at least one feature"`,
+'.github/workflows/retrain.yml':`name: retrain
+on:
+  workflow_dispatch:                 # manual: gh workflow run retrain.yml
+    inputs:
+      reason: { required: true }
+  repository_dispatch:
+    types: [drift-alert]             # Alertmanager webhook → GitHub
+  schedule:
+    - cron: "0 3 * * 1"              # weekly safety net
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: dvc pull
+      - name: Validate new data
+        run: python monitor/validate.py data/latest.parquet
+      - name: Train challenger
+        run: dvc repro train
+      - name: Champion vs challenger on recent data
+        run: python scripts/compare.py --challenger new --champion champion --data data/latest.parquet
+      - name: Register model and open deploy PR
+        run: python scripts/register.py --open-pr      # a human (or canary) still decides`,
+'load_test.sh':`#!/usr/bin/env bash
+# usage: ./load_test.sh --rps N | --stop
+hey -z 10m -q "$2" -c 1 -m POST -d @payload.json http://iris.local/predict &`
+};
+const LS2={'':'.github/  alerts.yml  data/  load_test.sh  logs/  monitor/  reports/','logs':'gateway.jsonl  predictions.jsonl','monitor':'drift_report.py  performance.py  validate.py','reports':''};
+
+function createObsSim(){
+  let S,gen=0,dirty=false;const sim={onChange(){},reset,handle,render};
+  const fail=(t,m)=>{t.print(m,'err');return false};const mark=()=>{dirty=true};
+  setInterval(()=>{if(!S)return;const p=p95();S.hist.push(+(p*(0.92+Math.random()*0.16)).toFixed(3));if(S.hist.length>40)S.hist.shift();S.ehist.push(errRate());if(S.ehist.length>40)S.ehist.shift();evalAlerts();sim.onChange()},1000);
+  setInterval(()=>{if(dirty&&S){dirty=false;sim.onChange()}},300);
+  function reset(sc){gen++;S={replicas:3,ready:3,load:0,canary:true,versions:['2.0','2.1'],files:{...FILES2},alerts:{},drift:false,psi:{sepal_length:0.03,sepal_width:0.04,petal_length:0.05,petal_width:0.04},acc:0.953,retrained:false,run:null,pr:null,reports:[],hist:[],ehist:[],t0:Date.now()};
+    if(sc.setup)sc.setup(S);for(let i=0;i<40;i++){S.hist.push(+(p95()*(0.92+Math.random()*0.16)).toFixed(3));S.ehist.push(errRate())}evalAlerts();mark()}
+  /* ---- metric model ---- */
+  const rps=()=>120+S.load;
+  function p95(){const cap=S.ready*90;const util=rps()/cap;return util>1.3?0.82:util>1?0.34:S.versions.includes('2.2')?0.104:0.118}
+  function errRate(){const cap=S.ready*90;let e=S.canary?0.0041:0.0006;if(rps()/cap>1.3)e+=0.017;return +e.toFixed(4)}
+  const RULES=[{n:'HighLatencyP95',sev:'page',sum:'p95 latency above 500ms for 5m',c:()=>p95()>0.5},{n:'HighErrorRate',sev:'page',sum:'More than 1% of requests failing',c:()=>errRate()>0.01},{n:'DataDrift',sev:'ticket',sum:'PSI above 0.25 on at least one feature',c:()=>S.drift}];
+  function evalAlerts(){const now=Date.now();RULES.forEach(r=>{const a=S.alerts[r.n]=S.alerts[r.n]||{state:'inactive'};if(r.c()){if(a.state==='inactive'){a.state='pending';a.since=now}else if(a.state==='pending'&&now-a.since>=2000){a.state='firing';a.firedAt=now;mark()}}else{if(a.state!=='inactive')mark();a.state='inactive'}})}
+  const firing=()=>RULES.filter(r=>S.alerts[r.n]&&S.alerts[r.n].state==='firing');
+  /* ---- text pipeline ---- */
+  function fileLines(p){if(LOGS[p])return LOGS[p];if(S.files[p]!=null)return S.files[p].split('\n');if(p.startsWith('reports/')&&S.reports.includes(p.slice(8)))return['<html>… Evidently-style drift report …</html>'];return null}
+  function expand(args){const out=[];for(const a of args){if(a.includes('*')){const re=new RegExp('^'+a.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'[^/]*')+'$');const m=Object.keys(LOGS).concat(Object.keys(S.files)).filter(f=>re.test(f));if(!m.length)return{err:`${a}: No such file or directory`};out.push(...m)}else out.push(a)}return{files:out}}
+  function metricsText(){const el=(Date.now()-S.t0)/1000;const ok=Math.round(182344+el*rps()*(1-errRate())),bad=Math.round(312+el*rps()*errRate());const cnt=ok+bad;const sum=(cnt*0.021).toFixed(1);
+    const b=[0.005,0.01,0.025,0.05,0.1,0.25,0.5,1];const fr=p95()>0.5?[0.02,0.08,0.2,0.4,0.6,0.8,0.9,0.99]:[0.05,0.3,0.8,0.93,0.97,0.995,0.999,1];
+    return `# HELP http_requests_total Total HTTP requests.
+# TYPE http_requests_total counter
+http_requests_total{method="POST",path="/predict",status="200"} ${ok}
+http_requests_total{method="POST",path="/predict",status="500"} ${bad}
+# HELP prediction_latency_seconds Time spent producing a prediction.
+# TYPE prediction_latency_seconds histogram
+${b.map((x,i)=>`prediction_latency_seconds_bucket{le="${x}"} ${Math.round(cnt*fr[i])}`).join('\n')}
+prediction_latency_seconds_bucket{le="+Inf"} ${cnt}
+prediction_latency_seconds_sum ${sum}
+prediction_latency_seconds_count ${cnt}
+# HELP prediction_class_total Predictions per predicted class.
+# TYPE prediction_class_total counter
+prediction_class_total{class="setosa"} ${Math.round(ok*0.33)}
+prediction_class_total{class="versicolor"} ${Math.round(ok*0.34)}
+prediction_class_total{class="virginica"} ${Math.round(ok*0.33)}
+# HELP feature_missing_total Requests where a required feature was missing or null.
+# TYPE feature_missing_total counter
+feature_missing_total{feature="petal_width"} ${S.canary?bad:312}
+# HELP model_info Model version loaded by this replica set.
+# TYPE model_info gauge
+${S.versions.map(v=>`model_info{version="${v}"} 1`).join('\n')}`}
+  function jqProg(prog,vals){const fs=splitTop(prog,'|');for(const f0 of fs){const f=f0.trim();const next=[];for(const v of vals)next.push(...jqOne(f,v));vals=next}return vals}
+  const getP=(v,p)=>p.split('.').filter(Boolean).reduce((o,k)=>o==null?null:(o[k]===undefined?null:o[k]),v);
+  function jqOne(f,v){if(f==='.')return[v];if(f==='keys')return[Object.keys(v||{})];if(f==='length')return[Array.isArray(v)||typeof v==='string'?v.length:Object.keys(v||{}).length];
+    let m=/^select\((.*)\)$/.exec(f);if(m)return evalCond(m[1],v)?[v]:[];
+    m=/^\{(.*)\}$/.exec(f);if(m){const o={};m[1].split(',').map(s=>s.trim()).filter(Boolean).forEach(k=>{const mm=/^(\w+)\s*:\s*(\.[\w.]+)$/.exec(k);if(mm)o[mm[1]]=getP(v,mm[2]);else o[k]=v&&v[k]!==undefined?v[k]:null});return[o]}
+    m=/^\[(.*)\]$/.exec(f);if(m)return[m[1].split(',').map(s=>getP(v,s.trim()))];
+    if(/^(\.[\w]+)+$/.test(f))return[getP(v,f)];throw new Error(`jq: error: syntax error, unexpected INVALID_CHARACTER (Unix shell quoting issues?) at <top-level>, line 1:\n${f}\njq: 1 compile error`)}
+  function evalCond(c,v){return c.split(/\s+and\s+/).every(part=>{part=part.trim();let m=/^has\("(\w+)"\)$/.exec(part);if(m)return v&&m[1]in v;
+      m=/^(\.[\w.]+)\s*(==|!=|>=|<=|>|<)\s*(.+)$/.exec(part);if(!m){if(/^\.[\w.]+$/.test(part))return !!getP(v,part);throw new Error('jq: error: unsupported condition: '+part)}
+      const l=getP(v,m[1]);let r;try{r=JSON.parse(m[3])}catch(e){throw new Error(`jq: error: ${m[3]} is not defined at <top-level>, line 1`)}
+      switch(m[2]){case '==':return l===r;case '!=':return l!==r;case '>':return l>r;case '<':return l<r;case '>=':return l>=r;case '<=':return l<=r}})}
+  function jqStage(args,input,t){const {pos,f}=parseArgs(args,[]);const prog=pos[0];if(!prog)throw new Error('Usage: jq [OPTIONS] FILTER [FILES...]');let lines=input;
+    if(pos[1]){lines=[];for(const p of pos.slice(1)){const l=fileLines(p);if(!l)throw new Error(`jq: error: Could not open ${p}: No such file or directory`);lines.push(...l)}}
+    const vals=[];lines.forEach((l,i)=>{if(!l.trim())return;try{vals.push(JSON.parse(l))}catch(e){throw new Error(`jq: error (at <stdin>:${i+1}): parse error: Invalid numeric literal at line 1, column ${Math.min(l.length,5)}\n(this input is not JSON — jq only reads JSON lines)`)}});
+    const res=jqProg(prog,vals);const out=[];res.forEach(v=>{if((f.r||f.rc||f.cr)&&typeof v==='string')out.push(v);else if(f.c||f.rc||f.cr)out.push(JSON.stringify(v));else out.push(...JSON.stringify(v,null,2).split('\n'))});return out}
+  function grepStage(args,input){const {pos,f}=parseArgs(args,['e','m']);const pat=pos[0];if(pat==null)throw new Error('usage: grep [-civh] PATTERN [FILE...]');
+    let re;try{re=new RegExp(pat,f.i?'i':'')}catch(e){re=new RegExp(pat.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),f.i?'i':'')}const v=f.v,cnt=f.c;
+    const test=l=>re.test(l)!==!!v;
+    if(pos.length>1){const ex=expand(pos.slice(1));if(ex.err)throw new Error('grep: '+ex.err);const multi=ex.files.length>1&&!f.h;const out=[];
+      for(const p of ex.files){const l=fileLines(p);if(!l){out.push(`grep: ${p}: No such file or directory`);continue}const m=l.filter(test);if(cnt)out.push((multi?p+':':'')+m.length);else m.forEach(x=>out.push((multi?p+':':'')+x))}return out}
+    const m=input.filter(test);return cnt?[String(m.length)]:m}
+  function stage(tok,input,first,t){const c=tok[0],args=tok.slice(1);
+    switch(c){
+      case 'cat':{const ex=expand(args);if(ex.err)throw new Error('cat: '+ex.err);if(!ex.files.length)return input;const out=[];for(const p of ex.files){const l=fileLines(p);if(!l)throw new Error(`cat: ${p}: No such file or directory`);out.push(...l)}return out}
+      case 'head':case 'tail':{const {pos,f}=parseArgs(args,['n']);let n=+(f.n||10);const neg=args.find(a=>/^-\d+$/.test(a));if(neg)n=+neg.slice(1);let l=input;
+        if(pos[0]){l=fileLines(pos[0]);if(!l)throw new Error(`${c}: cannot open '${pos[0]}' for reading: No such file or directory`)}if(f.f)t.print('(playground: -f would keep streaming new lines; showing the latest instead)','dim');return c==='head'?l.slice(0,n):l.slice(-n)}
+      case 'wc':{const {pos}=parseArgs(args,[]);if(pos[0]){const l=fileLines(pos[0]);if(!l)throw new Error(`wc: ${pos[0]}: No such file or directory`);return[`${l.length} ${pos[0]}`]}return[String(input.length)]}
+      case 'grep':return grepStage(args,input);
+      case 'jq':return jqStage(args,input,t);
+      case 'sort':{const {f}=parseArgs(args,['k','t']);const num=f.n||f.rn||f.nr;const rev=f.r||f.rn||f.nr;const out=input.slice().sort((a,b)=>num?parseFloat(a)-parseFloat(b):a<b?-1:a>b?1:0);return rev?out.reverse():out}
+      case 'uniq':{const {f}=parseArgs(args,[]);const out=[];input.forEach(l=>{const last=out[out.length-1];if(last&&last[0]===l)last[1]++;else out.push([l,1])});return out.map(([l,n])=>f.c?String(n).padStart(7)+' '+l:l)}
+      case 'curl':{const url=args.find(a=>/localhost|127\.0\.0\.1|iris\.local/.test(a))||'';if(/:8000\/metrics/.test(url))return metricsText().split('\n');if(/:8000\/health/.test(url))return['{"status":"ok"}'];
+        if(/iris\.local\/predict|:8000\/predict/.test(url))return[`{"prediction":"setosa","model_version":"${S.versions[S.versions.length-1]}"}`];throw new Error(`curl: (7) Failed to connect: try curl -s localhost:8000/metrics`)}
+      case 'kubectl':{if(args[0]==='logs'){const {pos,f}=parseArgs(args.slice(1),['tail','c']);if(!/iris-api/.test(pos[0]||''))throw new Error(`error: resource name may not be empty — try kubectl logs deploy/iris-api --tail=5`);const n=+(f.tail||20);return LOGS['logs/predictions.jsonl'].slice(-n)}break}
+      case 'echo':return[args.join(' ')];
+      case 'ls':{const d=(args[0]||'').replace(/\/$/,'');if(d==='data')return[dataFiles().join('  ')];if(d==='reports')return[S.reports.join('  ')];if(!(d in LS2))throw new Error(`ls: cannot access '${d}': No such file or directory`);return[LS2[d]]}
+    }
+    if(c==='kubectl')throw new Error('(kubectl here supports: logs deploy/iris-api, scale, get pods, top pods, argo rollouts abort)');
+    throw new Error(first?`bash: ${c}: command not found`:`${c}: not supported in a pipe here (use grep, jq, sort, uniq, wc, head, tail)`)}
+  const dataFiles=()=>['reference.parquet','prod_2026-W45.parquet','prod_2026-W46.parquet','labels_2026-W46.parquet'].concat(S.retrained?['train_v3.parquet','prod_2026-W47.parquet']:['prod_2026-W47.parquet']);
+  function pipeline(raw,t){const parts=splitTop(raw,'|');let lines=[];try{parts.forEach((p,i)=>{lines=stage(tokenize(p),lines,i===0,t)})}catch(e){return fail(t,e.message)}
+    const max=400;if(lines.length>max){t.print(lines.slice(0,max).join('\n'));t.print(`… ${lines.length-max} more lines (pipe into head, grep or jq to narrow it down)`,'dim')}else if(lines.length)t.print(lines.join('\n'));return true}
+  /* ---- tools ---- */
+  function promtool(a,t){if(a[0]!=='query'||a[1]!=='instant')return fail(t,"usage: promtool query instant http://localhost:9090 'EXPR'");if(!/localhost:9090/.test(a[2]||''))return fail(t,'Error: server URL required, e.g. http://localhost:9090');const e=(a[3]||'').replace(/\s+/g,' ');if(!e)return fail(t,'Error: missing query expression');
+    const ts=`@[${(Date.now()/1000).toFixed(3)}]`;const out=l=>t.print(l);
+    if(/histogram_quantile\(\s*0\.99/.test(e)){out(`{} => ${(p95()*1.6).toFixed(3)} ${ts}`);return true}
+    if(/histogram_quantile\(\s*0\.95/.test(e)){out(`{} => ${(p95()*(0.97+Math.random()*0.06)).toFixed(3)} ${ts}`);return true}
+    if(/histogram_quantile\(\s*0\.5/.test(e)){out(`{} => ${(p95()*0.35).toFixed(3)} ${ts}`);return true}
+    if(/http_requests_total/.test(e)&&/5\.\./.test(e)&&/\//.test(e)){out(`{} => ${errRate()} ${ts}`);return true}
+    if(/http_requests_total/.test(e)&&/by\s*\(\s*status/.test(e)){out(`{status="200"} => ${(rps()*(1-errRate())).toFixed(1)} ${ts}\n{status="500"} => ${(rps()*errRate()).toFixed(2)} ${ts}`);return true}
+    if(/rate\(http_requests_total/.test(e)){out(`{} => ${(rps()*(0.97+Math.random()*0.06)).toFixed(1)} ${ts}`);return true}
+    if(/prediction_class_total/.test(e)){const r0=rps();out(['setosa','versicolor','virginica'].map((c,i)=>`{class="${c}"} => ${(r0*[0.33,0.34,0.33][i]).toFixed(1)} ${ts}`).join('\n'));return true}
+    if(/feature_missing_total/.test(e)){out(`{feature="petal_width"} => ${S.canary?(rps()*0.0041).toFixed(3):'0'} ${ts}`);return true}
+    if(/feature_psi/.test(e)){if(/max\(/.test(e)){out(`{} => ${Math.max(...Object.values(S.psi)).toFixed(2)} ${ts}`);return true}out(Object.entries(S.psi).map(([k,v])=>`feature_psi{feature="${k}"} => ${v.toFixed(2)} ${ts}`).join('\n'));return true}
+    if(/model_info/.test(e)){out(S.versions.map(v=>`model_info{version="${v}"} => 1 ${ts}`).join('\n'));return true}
+    if(/^up\b/.test(e)){out(`up{instance="iris-api:8000", job="iris-api"} => 1 ${ts}`);return true}
+    t.print('(query returned no data — check the metric name with: curl -s localhost:8000/metrics | grep -v "^#")','dim');return true}
+  function amtool(a,t){if(a[0]!=='alert')return fail(t,'usage: amtool alert query');evalAlerts();const f=firing();if(!f.length){t.print('(no active alerts)','dim');return true}
+    t.print(table([['Alertname','Starts At','Summary','State','Severity']].concat(f.map(r=>[r.n,new Date(S.alerts[r.n].firedAt).toISOString().slice(0,19).replace('T',' ')+' UTC',r.sum,'active',r.sev])),2));return true}
+  function loadTest(a,t){if(a.includes('--stop')){S.load=0;t.print('Load test stopped.');mark();return true}const i=a.indexOf('--rps');const n=+(a[i+1]||0);if(i<0||!n)return fail(t,'usage: ./load_test.sh --rps N   |   ./load_test.sh --stop');
+    S.load=n;evalAlerts();t.print(`Generating ${n} req/s against http://iris.local/predict for 10m (in the background — ./load_test.sh --stop to end)`);t.print('(watch the p95 tile and sparkline below)','dim');mark();return true}
+  function kubectl(a,t){const {pos,f}=parseArgs(a,['replicas','tail','n']);
+    if(pos[0]==='scale'){const tgt=pos.slice(1).join('/');if(!/iris-api/.test(tgt))return fail(t,'Error from server (NotFound): deployments.apps not found — try deployment iris-api');const n=+f.replicas;if(!n)return fail(t,'error: required flag(s) "replicas" not set');
+      S.replicas=n;t.print('deployment.apps/iris-api scaled');const g=gen;if(n>S.ready){setTimeout(()=>{if(g===gen){S.ready=S.replicas;mark()}},1800)}else S.ready=n;mark();return true}
+    if(pos[0]==='get'&&/^pods?$/.test(pos[1]||'')){const rows=[['NAME','READY','STATUS','RESTARTS','AGE']];for(let i=0;i<S.replicas;i++)rows.push([`iris-api-7d4b9c8f6-${['x2kqp','m9zlw','r4b7b','k7krq','sj5dp','5mbb6','h9gp9','74k2f'][i%8]}`,i<S.ready?'1/1':'0/1',i<S.ready?'Running':'ContainerCreating','0',i<3?'3d':'5s']);t.print(table(rows));return true}
+    if(pos[0]==='top'&&/^pods?$/.test(pos[1]||'')){const per=Math.round(rps()/S.ready*4.2);const rows=[['NAME','CPU(cores)','MEMORY(bytes)']];for(let i=0;i<S.ready;i++)rows.push([`iris-api-7d4b9c8f6-${['x2kqp','m9zlw','r4b7b','k7krq','sj5dp','5mbb6','h9gp9','74k2f'][i%8]}`,`${Math.min(1000,per+Math.round(Math.random()*20))}m`,`${180+Math.round(Math.random()*30)}Mi`]);t.print(table(rows));if(per>800)t.print('(each pod is near its 1-core CPU limit: requests queue up, so latency climbs)','dim');return true}
+    if(pos[0]==='argo'&&pos[1]==='rollouts'&&pos[2]==='abort'){if(!S.canary)return fail(t,'(no canary in progress)');S.canary=false;S.versions=['2.0'];t.print("rollout 'iris-api' aborted");t.print('(traffic is back on 2.0: the missing-feature errors stop. The fix for 2.1 is a schema contract test in CI)','dim');mark();return true}
+    return null}
+  function driftReport(a,t){const {f}=parseArgs(a,['reference','current','output']);const ref=f.reference,cur=f.current;if(!ref||!cur||ref===true||cur===true)return fail(t,'usage: python monitor/drift_report.py --reference data/X.parquet --current data/Y.parquet');
+    const ex=x=>dataFiles().includes(x.replace(/^data\//,''));if(!ex(ref))return fail(t,`FileNotFoundError: [Errno 2] No such file or directory: '${ref}'`);if(!ex(cur))return fail(t,`FileNotFoundError: [Errno 2] No such file or directory: '${cur}'`);
+    const week=(/W(\d+)/.exec(cur)||[])[1];let psi;
+    if(/train_v3/.test(ref))psi={sepal_length:0.02,sepal_width:0.03,petal_length:0.04,petal_width:0.05};
+    else if(week==='46'||week==='47')psi={sepal_length:0.03,sepal_width:0.05,petal_length:week==='47'?0.44:0.41,petal_width:week==='47'?0.31:0.29};
+    else psi={sepal_length:0.02,sepal_width:0.04,petal_length:0.06,petal_width:0.05};
+    const ks=v=>v>0.2?'<0.001':v>0.08?'0.012':(0.2+v*3).toFixed(3);const n=Object.values(psi).filter(v=>v>0.25).length;
+    t.print(`Drift report · reference=${ref} (n=12,000) · current=${cur} (n=${week==='47'?'3,960':'8,412'})\n`+table([['feature','type','PSI','KS p-value','drift']].concat(Object.entries(psi).map(([k,v])=>[k,'num',v.toFixed(2),ks(v),v>0.25?'YES':v>0.1?'moderate':'no']).concat([['prediction','cat',n?'0.18':'0.03','—',n?'moderate':'no']])),3));
+    const share=n/4;if(share>=0.3)t.print(`Drifted features: ${n} / 4 (${Math.round(share*100)}%) → dataset drift DETECTED (threshold 30%)`,'err');else t.print(`Drifted features: ${n} / 4 → no dataset drift`,'ok');
+    const out=f.output||`reports/drift_W${week||'xx'}.html`;S.reports.push(out.replace(/^reports\//,''));t.print(`Report written to ${out}; pushed feature_psi gauges to Prometheus Pushgateway`,'dim');
+    S.psi=psi;S.drift=share>=0.3;mark();return true}
+  function perf(a,t){const {f}=parseArgs(a,['labels','predictions']);if(!f.labels||f.labels===true)return fail(t,'usage: python monitor/performance.py --labels data/labels_2026-W46.parquet');if(!dataFiles().includes(String(f.labels).replace(/^data\//,'')))return fail(t,`FileNotFoundError: ${f.labels}`);
+    t.print(`Joined 5,120 logged predictions with delayed labels by request_id (61% label coverage so far)\n`+table([['metric','baseline (train)','week 46','change'],['accuracy','0.953','0.812','-0.141  ✖'],['f1_macro','0.951','0.794','-0.157  ✖'],['virginica recall','0.94','0.58','-0.36   ✖']],3));
+    t.print('Performance below SLO (accuracy ≥ 0.90) → retraining recommended',S.retrained?'dim':'err');if(!S.retrained)S.acc=0.812;mark();return true}
+  function gh(a,t){if(a[0]==='workflow'&&a[1]==='run'){if(a[2]!=='retrain.yml')return fail(t,`could not find any workflows named ${a[2]||''}`);if(!a.includes('-f'))return fail(t,"Error: missing required input 'reason' (use -f reason=...)");
+      startRetrain();t.print('✓ Created workflow_dispatch event for retrain.yml at main\n\nTo see runs for this workflow, try: gh run list --workflow=retrain.yml');return true}
+    if(a[0]==='run'&&a[1]==='watch'){const r=S.run;if(!r)return fail(t,'found no in progress runs to watch');watchRun(t,r);return true}
+    if(a[0]==='run'&&a[1]==='list'){if(!S.run){t.print('no runs found');return true}t.print(table([['STATUS','TITLE','WORKFLOW','BRANCH','EVENT','ID'],[S.run.done?'✓':'*','retrain: '+S.run.reason,'retrain','main','workflow_dispatch','11800000522']],2));return true}
+    if(a[0]==='pr'&&a[1]==='view'){if(!S.pr)return fail(t,'no pull requests found');t.print(`Promote iris-classifier v3 (${S.run.reason}) #57\nOpen • github-actions[bot] wants to merge 1 commit into main from retrain/v3\n\n  Triggered by: ${S.run.reason}\n  Data: 12,840 new labelled rows (weeks 44–46), validation 14/14 passed\n\n  | metric (week 46 holdout) | champion v2 | challenger v3 |\n  |--------------------------|-------------|---------------|\n  | accuracy                 | 0.812       | 0.946         |\n  | f1_macro                 | 0.794       | 0.943         |\n  | p95 latency (ms)         | 11.8        | 10.4          |\n\n  Merging rolls out ketan/iris-api:2.2 by canary.\n\nhttps://github.com/ketan/iris-mlops/pull/57`);return true}
+    if(a[0]==='pr'&&a[1]==='merge'){if(!S.pr)return fail(t,'no pull requests found');if(S.pr.merged)return fail(t,'X Pull request #57 was already merged');S.pr.merged=true;t.print('✓ Squashed and merged pull request #57 (Promote iris-classifier v3)','ok');t.print('(cd workflow: canary rollout of ketan/iris-api:2.2 started — watch the model tile)','dim');
+      const g=gen;S.versions=['2.0','2.2'];S.canary=false;mark();setTimeout(()=>{if(g!==gen)return;S.versions=['2.2'];S.acc=0.946;mark()},4000);return true}
+    return fail(t,'gh: try gh workflow run retrain.yml -f reason=drift-W46 | gh run watch | gh pr view 57 | gh pr merge 57 --squash')}
+  function startRetrain(){const reason='drift-W46';const steps=[['Set up job',300],['Run actions/checkout@v4',400],['Run dvc pull',900,'12,840 new labelled rows (weeks 44–46)'],['Validate new data',700,'14/14 expectations passed (ranges, nulls, schema)'],['Train challenger',1500,'RandomForest n_estimators=300 · accuracy 0.946 on week-46 holdout'],['Champion vs challenger on recent data',700,'champion v2 0.812 · challenger 0.946 → PROMOTE'],['Register model and open deploy PR',600,'registered iris-classifier v3 · opened PR #57'],['Complete job',200]];
+    S.run={reason,steps:steps.map(([n,ms,info])=>({n,ms,info,done:false})),done:false};const g=gen;let i=0;const go=()=>{if(g!==gen)return;if(i>=S.run.steps.length){S.run.done=true;S.retrained=true;S.pr={merged:false};mark();return}const s=S.run.steps[i];setTimeout(()=>{if(g!==gen)return;s.done=true;i++;mark();go()},s.ms)};setTimeout(go,300);mark()}
+  function watchRun(t,r){const g=gen;let shown=0;t.print(`Refreshing run status every 3 seconds. Press Ctrl+C to quit.\n\nmain RETRAIN · 11800000522\nTriggered via workflow_dispatch less than a minute ago\n\nJOBS`,'dim');
+    const iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return}while(shown<r.steps.length&&r.steps[shown].done){const s=r.steps[shown];t.print(`  ✓ ${s.n}`,'ok');if(s.info)t.print(`      ${s.info}`,'dim');shown++}
+      if(r.done){clearInterval(iv);t.print("\n✓ Run retrain (11800000522) completed with 'success'",'ok');t.print('(a human still reviews and merges the PR: gh pr view 57)','dim')}},250)}
+  function one(raw,t){const a=tokenize(raw);const c0=a[0];if(!c0)return true;
+    if(c0==='clear'){t.clear();return true}
+    if(c0==='help'){t.print(`Simulated in this lab (on-call for iris-api):
+  Text pipelines:  cat | head [-n N] | tail [-n N] | grep [-c -v -i -h] PATTERN [FILES] | jq [-c -r] 'FILTER' [FILE] | sort [-n -r] | uniq [-c] | wc -l
+    jq filters: .  .field  select(.a=="x" and .b > 5)  {a, b}  [.a, .b]  has("key")  — chained with |
+  curl -s localhost:8000/metrics      kubectl logs deploy/iris-api --tail=N
+  promtool query instant http://localhost:9090 'EXPR'      amtool alert query
+  ./load_test.sh --rps N | --stop     kubectl scale deployment iris-api --replicas=N    kubectl get pods | top pods
+  kubectl argo rollouts abort iris-api
+  python monitor/drift_report.py --reference data/A.parquet --current data/B.parquet
+  python monitor/performance.py --labels data/labels_2026-W46.parquet
+  gh workflow run retrain.yml -f reason=TEXT | gh run watch | gh pr view 57 | gh pr merge 57 --squash
+  ls [dir]   cat FILE   clear`);return true}
+    if(c0==='promtool')return promtool(a.slice(1),t);
+    if(c0==='amtool')return amtool(a.slice(1),t);
+    if(c0==='./load_test.sh'||(c0==='bash'&&a[1]==='load_test.sh'))return loadTest(a.slice(c0==='bash'?2:1),t);
+    if(c0==='gh')return gh(a.slice(1),t);
+    if(c0==='python'||c0==='python3'){if(a[1]==='monitor/drift_report.py')return driftReport(a.slice(2),t);if(a[1]==='monitor/performance.py')return perf(a.slice(2),t);if(a[1]==='monitor/validate.py'){t.print('✔ 14/14 expectations passed');return true}return fail(t,`python: can't open file '${a[1]||''}': [Errno 2] No such file or directory`)}
+    if(c0==='kubectl'&&!splitTop(raw,'|')[1]){const r=kubectl(a.slice(1),t);if(r!==null)return r}
+    return pipeline(raw,t)}
+  function handle(raw,t){return runChain(raw,t,one)}
+  function render(el){const p=p95(),e=errRate(),f=firing();const v=S.versions.length>1?`${S.versions[0]} + ${S.versions[1]}${S.canary?' (canary 30%)':' (canary)'}`:S.versions[0];const mp=Math.max(...Object.values(S.psi));
+    const tile=(l,val,cls,wide)=>`<div class="tile ${cls||''} ${wide?'wide':''}"><div class="l">${l}</div><div class="v">${val}</div></div>`;
+    el.innerHTML=`<h4>Grafana · iris-api (live)</h4><div class="dash">
+      ${tile('model version',esc(v),'',true)}
+      ${tile('requests / s',rps().toFixed(0))}
+      ${tile('replicas ready',`${S.ready}/${S.replicas}`,S.ready<S.replicas?'warn':'')}
+      ${tile('p95 latency',Math.round(p*1000)+' ms',p>0.5?'bad':p>0.3?'warn':'good')}
+      ${tile('error rate',(e*100).toFixed(2)+'%',e>0.01?'bad':e>0.003?'warn':'good')}
+      ${tile('max feature PSI',mp.toFixed(2),mp>0.25?'bad':mp>0.1?'warn':'good')}
+      ${tile('accuracy (labelled)',S.acc.toFixed(3),S.acc<0.9?'bad':'good')}
+      <div class="tile wide"><div class="l">p95 latency · last 40 s</div>${sparkSVG(S.hist,300,46,p>0.5?'#dc2626':'#1d63ed',1)}</div>
+      <div class="tile wide ${f.length?(f.some(r=>r.sev==='page')?'bad':'warn'):'good'}"><div class="l">alerts firing</div><div class="v" style="font-size:15px;white-space:normal">${f.length?f.map(r=>`${r.n} <span class="badge ${r.sev==='page'?'b-fail':'b-warn'}">${r.sev}</span>`).join(' '):'none'}</div></div></div>`}
+  return sim}
+
+const obsSim=createObsSim();
+const obsScenarios=[
+ {title:'Find the failing requests',desc:'Errors were reported after the 2.1 canary started. Use logs, grep and jq to find what fails, for whom, and why.',
+  intro:'# Scenario A · logs\n# Users report occasional 502s from /predict since 14:20. iris-api 2.1 is in a 30% canary.\n# Logs are JSON lines in logs/. Try piping: jq … | sort | uniq -c',
+  steps:[
+   {cmd:'ls logs',match:/^ls logs/,note:'Service logs, one JSON object per line.'},
+   {cmd:'tail -n 2 logs/predictions.jsonl',match:/^tail .*predictions\.jsonl/,note:'Each line: timestamp, level, request_id, model_version, latency, prediction, features.'},
+   {cmd:'wc -l logs/predictions.jsonl',match:/^wc -l/,note:'How many requests in this window.'},
+   {cmd:`grep -c '"level":"ERROR"' logs/predictions.jsonl`,match:/^grep -c .*ERROR/,note:'Quick count with grep.'},
+   {cmd:`jq -c 'select(.level=="ERROR") | {ts, request_id, model_version, error}' logs/predictions.jsonl | head -n 5`,match:/^jq .*select\(\.level\s*==\s*"ERROR"\).*\{/,note:'Structured logs let you filter on fields, not fragile text.'},
+   {cmd:`jq -r 'select(.level=="ERROR") | .error' logs/predictions.jsonl | sort | uniq -c`,match:/^jq .*\.error.*uniq -c/,note:'One kind of error.'},
+   {cmd:`jq -r 'select(.level=="ERROR") | .model_version' logs/predictions.jsonl | sort | uniq -c`,match:/^jq .*select\(\.level\s*==\s*"ERROR"\).*\.model_version.*uniq/,note:'Every error comes from 2.1…'},
+   {cmd:`jq -r '.model_version' logs/predictions.jsonl | sort | uniq -c`,match:/^jq -r '?\.model_version'? .*uniq/,note:'…even though 2.1 serves a minority of traffic. That\'s why model_version must be in every log line.'},
+   {cmd:'grep req-7f3a2b logs/*.jsonl',match:/^grep req-7f3a2b/,note:'Follow one request across services with its request_id: gateway retried, then returned 502.'},
+   {cmd:`jq -c 'select(.request_id=="req-7f3a2b") | .features' logs/predictions.jsonl`,match:/^jq .*req-7f3a2b.*features/,note:'Root cause: <code>petal_width</code> arrives as null for 2.1 (it expects a renamed field).'},
+   {cmd:'kubectl argo rollouts abort iris-api',match:/^kubectl argo rollouts abort/,note:'Mitigate first: send everyone back to 2.0. Fix 2.1 afterwards.'}],
+  tryThese:[
+   {cmd:`jq -c 'select(.latency_ms > 500) | {request_id, model_version, latency_ms}' logs/predictions.jsonl`,why:'Slow requests: WARNING lines from 2.0, unrelated to the errors.'},
+   {cmd:'grep ERROR logs/gateway.jsonl | head -n 3',why:'The same incident as the gateway saw it.'},
+   {cmd:`jq -r '.prediction' logs/predictions.jsonl | sort | uniq -c`,why:'Prediction mix, a cheap model-quality signal before labels arrive.'},
+   {cmd:`cat logs/predictions.jsonl | jq '.features.petal_length'`,why:'Pretty-print a nested field.'},
+   {cmd:'curl -s localhost:8000/metrics | jq .',why:'jq on non-JSON → parse error. Metrics are a text format.'}]},
+ {title:'Metrics, SLOs & alerts',desc:'Read Prometheus metrics, query p95 latency, push load until an alert fires, then fix it by scaling.',
+  intro:'# Scenario B · metrics & alerts\n# Prometheus scrapes iris-api /metrics every 15 s; Alertmanager routes pages. alerts.yml holds the rules.',
+  steps:[
+   {cmd:`curl -s localhost:8000/metrics | grep -v '^#' | head -n 12`,match:/^curl .*metrics/,note:'What the app exposes: counters and a latency histogram (comment lines removed).'},
+   {cmd:`promtool query instant http://localhost:9090 'sum(rate(http_requests_total[5m]))'`,match:/^promtool .*rate\(http_requests_total/,note:'Throughput: requests per second over 5 minutes.'},
+   {cmd:`promtool query instant http://localhost:9090 'histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))'`,match:/^promtool .*histogram_quantile\(0\.95/,note:'p95 latency in seconds, computed from histogram buckets.'},
+   {cmd:'cat alerts.yml',match:/^cat alerts\.yml/,note:'Symptom-based rules with <code>for:</code> windows and severities.'},
+   {cmd:'./load_test.sh --rps 400',match:/load_test\.sh --rps/,note:'Traffic spike: 120 → 520 req/s. Watch the dashboard.'},
+   {cmd:`promtool query instant http://localhost:9090 'histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))'`,match:/^promtool .*histogram_quantile\(0\.95/,note:'p95 has blown past 0.5 s.'},
+   {cmd:'amtool alert query',match:/^amtool alert/,note:'HighLatencyP95 (and HighErrorRate) are firing → someone gets paged.'},
+   {cmd:'kubectl top pods',match:/^kubectl top/,note:'Diagnose: every pod is CPU-saturated.'},
+   {cmd:'kubectl scale deployment iris-api --replicas=6',match:/^kubectl scale .*replicas=([6-9]|\d\d)/,note:'Mitigate. (Long-term: a HorizontalPodAutoscaler.)'},
+   {cmd:`promtool query instant http://localhost:9090 'histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))'`,match:/^promtool .*histogram_quantile\(0\.95/,note:'Back under budget once the new pods are ready.'},
+   {cmd:'amtool alert query',match:/^amtool alert/,note:'Alerts resolve on their own when the condition clears.'},
+   {cmd:'./load_test.sh --stop',match:/load_test\.sh --stop/,note:'End the test.'}],
+  tryThese:[
+   {cmd:`promtool query instant http://localhost:9090 'sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))'`,why:'The error-rate SLI.'},
+   {cmd:`promtool query instant http://localhost:9090 'sum(rate(prediction_class_total[1h])) by (class)'`,why:'Prediction mix as a metric: alert if it shifts.'},
+   {cmd:`promtool query instant http://localhost:9090 'model_info'`,why:'Which model versions are live right now.'},
+   {cmd:'kubectl scale deployment iris-api --replicas=2',why:'Under-provision even without the load test.'},
+   {cmd:`curl -s localhost:8000/metrics | grep feature_missing`,why:'A data-quality counter exposed by the app itself.'}]},
+ {title:'Drift → retrain → redeploy',desc:'A drift ticket arrived overnight. Confirm it, check performance with fresh labels, run the gated retraining pipeline and ship the new model.',
+  setup:S=>{S.drift=true;S.psi={sepal_length:0.03,sepal_width:0.05,petal_length:0.41,petal_width:0.29};S.alerts.DataDrift={state:'firing',since:Date.now()-3600000,firedAt:Date.now()-1800000}},
+  intro:'# Scenario C · closing the loop\n# Overnight the nightly drift job pushed feature_psi, and Alertmanager opened a DataDrift ticket.',
+  steps:[
+   {cmd:'amtool alert query',match:/^amtool alert/,note:'A <b>ticket</b>, not a page: drift needs investigation, not a 3 a.m. wake-up.'},
+   {cmd:'ls data',match:/^ls data/,note:'Training reference, weekly production samples, and labels that arrived late.'},
+   {cmd:'python monitor/drift_report.py --reference data/reference.parquet --current data/prod_2026-W46.parquet',match:/^python3? monitor\/drift_report\.py .*W46/,note:'Per-feature PSI and KS: the petal features moved.'},
+   {cmd:`promtool query instant http://localhost:9090 'feature_psi'`,match:/^promtool .*feature_psi/,note:'The same numbers as metrics, so they can be graphed and alerted on.'},
+   {cmd:'python monitor/performance.py --labels data/labels_2026-W46.parquet',match:/^python3? monitor\/performance\.py/,note:'Drift alone isn\'t proof. With labels joined by request_id: accuracy really did drop.'},
+   {cmd:'cat .github/workflows/retrain.yml',match:/^cat \.github\/workflows\/retrain\.yml/,note:'Continuous training: triggered manually, by a drift webhook or weekly. Gated by validation and champion/challenger.'},
+   {cmd:'gh workflow run retrain.yml -f reason=drift-W46',match:/^gh workflow run retrain\.yml/,note:'Kick off retraining on the newest labelled data.'},
+   {cmd:'gh run watch',match:/^gh run watch/,note:'Validate → train → compare with champion on recent data → register → open a PR.'},
+   {cmd:'gh pr view 57',match:/^gh pr view/,note:'The evidence, in the PR. A human approves the model change.'},
+   {cmd:'gh pr merge 57 --squash',match:/^gh pr merge/,note:'Merging starts a canary of ketan/iris-api:2.2 (see the CI/CD playground).'},
+   {cmd:'python monitor/drift_report.py --reference data/train_v3.parquet --current data/prod_2026-W47.parquet',match:/^python3? monitor\/drift_report\.py .*train_v3/,note:'The new model was trained on the new distribution, so against <i>its</i> reference there\'s no drift.'},
+   {cmd:'amtool alert query',match:/^amtool alert/,note:'Ticket resolved. Loop closed.'}],
+  tryThese:[
+   {cmd:'python monitor/drift_report.py --reference data/reference.parquet --current data/prod_2026-W45.parquet',why:'Last week: stable. Drift started in week 46.'},
+   {cmd:'python monitor/drift_report.py --reference data/reference.parquet --current data/prod_2026-W47.parquet',why:'Against the <i>old</i> reference, this week still drifts: always compare with the reference of the model that is serving.'},
+   {cmd:'gh pr merge 57 --squash',why:'Before the run finishes → no PR yet.'},
+   {cmd:'gh workflow run retrain.yml',why:'Missing required input.'}]}
+];
+makeLab($('#obsLab'),{title:'Lab · on-call terminal',termName:'bash — ops@iris-monitoring',prompt:'ketan@ops:~/iris-monitoring$ ',sim:obsSim,scenarios:obsScenarios});
+
+/* ---------------- 01 silent failure chart ---------------- */
+(function(){const W=720,H=150,PL=44,PR=10,PT=12,PB=24;const weeks=Array.from({length:20},(_,i)=>i+1);const r=mulberry(3);
+  const lat=weeks.map(()=>110+r()*12),err=weeks.map(()=>0.15+r()*0.12),acc=weeks.map(w=>w<9?0.95+(r()-0.5)*0.012:0.70+(r()-0.5)*0.03),vir=weeks.map(w=>w<9?0.33+(r()-0.5)*0.03:0.91+(r()-0.5)*0.03);
+  function chart(series,ymin,ymax,fmt,title,blur){const x=i=>PL+(i/(weeks.length-1))*(W-PL-PR),y=v=>PT+(1-(v-ymin)/(ymax-ymin))*(H-PT-PB);
+    let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(title)}" style="${blur?'filter:blur(3px);opacity:.35':''}">`;
+    [0,0.5,1].forEach(q=>{const v=ymin+q*(ymax-ymin);s+=`<line x1="${PL}" x2="${W-PR}" y1="${y(v)}" y2="${y(v)}" stroke="#e7e5de"/><text x="${PL-6}" y="${y(v)+4}" font-size="11" text-anchor="end" fill="#8a8f99" font-family="JetBrains Mono">${fmt(v)}</text>`});
+    weeks.forEach((w,i)=>{if(i%2===0)s+=`<text x="${x(i)}" y="${H-6}" font-size="11" text-anchor="middle" fill="#8a8f99" font-family="JetBrains Mono">w${w}</text>`});
+    s+=`<line x1="${x(8)}" x2="${x(8)}" y1="${PT}" y2="${H-PB}" stroke="#d97706" stroke-dasharray="4 4"/><text x="${x(8)+5}" y="${PT+10}" font-size="11" fill="#b45309">upstream switches cm → mm</text>`;
+    series.forEach(([d,c])=>{s+=`<polyline fill="none" stroke="${c}" stroke-width="2.5" points="${d.map((v,i)=>x(i)+','+y(v)).join(' ')}"/>`});
+    s+=`<text x="${PL}" y="${PT-1}" font-size="11.5" font-weight="600" fill="#14161b">${esc(title)}</text></svg>`;return s}
+  function draw(mode){const all=mode==='all';$('#sfChart').innerHTML=chart([[lat.map(v=>v/1000),'#1d63ed'],[err.map(v=>v/100*20),'#0d9488']],0,0.2,v=>Math.round(v*1000)+'ms','System: p95 latency and error rate (green ×20 scale)')+
+      `<div style="position:relative">${chart([[acc,'#dc2626'],[vir,'#7c3aed']],0.2,1,v=>Math.round(v*100)+'%','Model: accuracy and share predicted "virginica"',!all)}${all?'':'<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:600;color:#5b616d">🙈 not monitored</div>'}</div>`;
+    $('#sfLegend').innerHTML='<span><i style="background:#1d63ed"></i>p95 latency</span><span><i style="background:#0d9488"></i>error rate</span>'+(all?'<span><i style="background:#dc2626"></i>accuracy (labels, delayed)</span><span><i style="background:#7c3aed"></i>% predicted virginica</span>':'');
+    $('#sfNote').innerHTML=all?'From week 9 accuracy falls from ~95% to ~70% and the model calls most flowers <i>virginica</i>: petal values are 10× larger, so they look like huge flowers. A simple range check on <code>petal_length</code> (1–7) or a prediction-mix alert would have fired the same day.':'Twenty weeks of perfect health: latency flat, errors near zero, nobody paged. Now switch on the model metrics.';
+    $$('#sfTog button').forEach(b=>b.classList.toggle('on',b.dataset.v===mode))}
+  $$('#sfTog button').forEach(b=>b.onclick=()=>draw(b.dataset.v));draw('sys')})();
+
+/* ---------------- 03 drift lab ---------------- */
+(function(){const N=2000;const gauss=rng=>{let u=0,v=0;while(!u)u=rng();v=rng();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
+  const mk=seed=>{const r=mulberry(seed);return Array.from({length:N},()=>{const c=r()<0.33;return{c,z:gauss(r),m:r()}})};
+  const RZ=mk(11),CZ=mk(29);const val=(d,shift,scale)=>d.c?1.46+0.17*d.z*scale+shift*0.3:4.9+0.75*d.z*scale+shift;
+  const ref=RZ.map(d=>val(d,0,1)).sort((a,b)=>a-b);
+  function ks(a,b){let i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]<=b[j])i++;else j++;d=Math.max(d,Math.abs(i/a.length-j/b.length))}const ne=a.length*b.length/(a.length+b.length);const l=(Math.sqrt(ne)+0.12+0.11/Math.sqrt(ne))*d;let p=0;for(let k=1;k<100;k++)p+=2*Math.pow(-1,k-1)*Math.exp(-2*k*k*l*l);return{d,p:Math.max(0,Math.min(1,p))}}
+  function psi(a,b){const edges=[];for(let q=1;q<10;q++)edges.push(a[Math.floor(q*a.length/10)]);const bin=x=>{let k=0;while(k<edges.length&&x>edges[k])k++;return k};const ca=Array(10).fill(0),cb=Array(10).fill(0);a.forEach(x=>ca[bin(x)]++);b.forEach(x=>cb[bin(x)]++);
+    let s=0;for(let k=0;k<10;k++){const pa=Math.max(ca[k]/a.length,1e-4),pb=Math.max(cb[k]/b.length,1e-4);s+=(pb-pa)*Math.log(pb/pa)}return s}
+  const PRE=[['Normal week',0,1,0],['Seasonal mix',0.3,1.1,0],['Sensor recalibrated',0.8,1,0],['New customer segment',-0.6,1.5,0],['Broken upstream join',0,1,25]];
+  const pc=$('#driftPresets');PRE.forEach(p=>{const b=document.createElement('button');b.className='cchip';b.textContent=p[0];b.onclick=()=>{$('#dShift').value=p[1];$('#dScale').value=p[2];$('#dMiss').value=p[3];$$('.cchip',pc).forEach(x=>x.classList.toggle('on',x===b));draw()};pc.appendChild(b)});
+  function hist(arr,lo,hi,n){const h=Array(n).fill(0);arr.forEach(x=>{const k=Math.floor((x-lo)/(hi-lo)*n);if(k>=0&&k<n)h[k]++});return h.map(v=>v/arr.length)}
+  function draw(){const sh=+$('#dShift').value,sc=+$('#dScale').value,mi=+$('#dMiss').value;$('#dShiftV').textContent=(sh>0?'+':'')+sh.toFixed(2);$('#dScaleV').textContent=sc.toFixed(2);$('#dMissV').textContent=mi;
+    const cur=CZ.filter(d=>d.m>=mi/100).map(d=>val(d,sh,sc)).sort((a,b)=>a-b);const lo=0,hi=9,nb=45;const hr=hist(ref,lo,hi,nb),hc=hist(cur,lo,hi,nb);const mx=Math.max(...hr,...hc)*1.1;
+    const W=720,H=200,PL=10,PB=22;const bw=(W-PL*2)/nb;let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Reference and production histograms">`;
+    hr.forEach((v,i)=>{const h=v/mx*(H-PB-6);s+=`<rect x="${PL+i*bw}" y="${H-PB-h}" width="${bw-1}" height="${h}" fill="#9ca3af" opacity=".55"/>`});
+    hc.forEach((v,i)=>{const h=v/mx*(H-PB-6);s+=`<rect x="${PL+i*bw+bw*0.25}" y="${H-PB-h}" width="${bw*0.5}" height="${h}" fill="#1d63ed" opacity=".8"/>`});
+    for(let k=0;k<=9;k++)s+=`<text x="${PL+k/9*(W-PL*2)}" y="${H-6}" font-size="11" text-anchor="middle" fill="#8a8f99" font-family="JetBrains Mono">${k}</text>`;s+='</svg>';$('#driftChart').innerHTML=s;
+    const P=psi(ref,cur),K=ks(ref,cur);const mean=a=>a.reduce((x,y)=>x+y,0)/a.length;
+    $('#driftFacts').innerHTML=`<div class="fact"><b>${P.toFixed(3)}</b><span>PSI</span></div><div class="fact"><b>${K.d.toFixed(3)}</b><span>KS statistic D</span></div><div class="fact"><b>${K.p<0.001?'&lt;0.001':K.p.toFixed(3)}</b><span>KS p-value</span></div><div class="fact"><b>${mean(ref).toFixed(2)} → ${mean(cur).toFixed(2)}</b><span>mean (cm)</span></div>`;
+    const v=$('#driftVerdict');let cls,msg;
+    if(mi>5){cls='bad';msg=`Data-quality problem first: ${mi}% of values are missing (threshold 5%). Fix the upstream join before reading drift, and don't retrain on this data.`}
+    else if(P>=0.25){cls='bad';msg='Significant drift (PSI ≥ 0.25). Check upstream for bugs or unit changes, confirm with labelled performance, then consider retraining on recent data.'}
+    else if(P>=0.1){cls='warn';msg='Moderate shift (PSI 0.1–0.25). Open a ticket, watch the trend and the model\'s performance on this segment.'}
+    else{cls='ok';msg='Stable (PSI < 0.1).'+(K.p<0.05?' KS calls the difference statistically significant, but with 2,000 rows per side that happens for tiny shifts. The magnitude is what matters.':' No action needed.')}
+    v.className='verdict '+cls;v.textContent=msg}
+  ['dShift','dScale','dMiss'].forEach(id=>$('#'+id).oninput=()=>{$$('.cchip',pc).forEach(x=>x.classList.remove('on'));draw()});pc.firstChild.classList.add('on');draw()})();
+
+/* ---------------- 04 log builder ---------------- */
+(function(){const F=[['ts',1,'"2026-11-18T14:21:07.412Z"'],['level',1,'"INFO"'],['request_id',1,'"req-7f3a2b"'],['trace_id',0,'"4bf92f3577b34da6a3ce929d0e0e4736"'],['model_version',1,'"2.1"'],['latency_ms',1,'12'],['features',1,'{"sepal_length":5.1,"sepal_width":3.5,"petal_length":1.4,"petal_width":0.2}'],['prediction',1,'"setosa"'],['proba',1,'0.97'],['user_id_hash',0,'"sha256:9f86d08…"'],['user_email',0,'"priya.sharma@example.com"'],['host',0,'"iris-api-7d4b9c8f6-x2kqp"']];
+  let fmt='json';const box=$('#logFields');F.forEach(([k,on])=>{const l=document.createElement('label');l.innerHTML=`<input type="checkbox" data-k="${k}" ${on?'checked':''}> ${k}`;box.appendChild(l)});
+  function draw(){const on=new Set($$('input',box).filter(x=>x.checked).map(x=>x.dataset.k));const sel=F.filter(f=>on.has(f[0]));
+    $('#logLine').textContent=fmt==='json'?'{'+sel.map(([k,,v])=>`"${k}":${v}`).join(',')+'}':`2026-11-18 14:21:07 INFO ${on.has('request_id')?'[req-7f3a2b] ':''}predicted ${on.has('prediction')?'setosa':'?'}${on.has('proba')?' (0.97)':''}${on.has('latency_ms')?' in 12ms':''}${on.has('model_version')?' using model v2.1':''}${on.has('user_email')?' for priya.sharma@example.com':''}`;
+    const W=[];const add=(c,t)=>W.push(`<li>${c} ${t}</li>`);
+    if(on.has('user_email'))add('🔒','<b>Raw PII in logs.</b> Email addresses are personal data under GDPR and India\'s DPDP Act. Log a salted hash (<code>user_id_hash</code>) or nothing.');
+    if(!on.has('model_version'))add('❌','No <code>model_version</code>: you can\'t tell which model made a prediction, so canaries, rollbacks and A/B analysis become guesswork.');
+    if(!on.has('request_id')&&!on.has('trace_id'))add('❌','No request or trace ID: you can\'t follow one request through the gateway, feature store and model.');
+    if(!on.has('prediction'))add('❌','No <code>prediction</code>: no prediction-drift monitoring, and nothing to join with labels later.');
+    if(!on.has('features'))add('⚠️','No <code>features</code>: you can\'t compute data drift, check training-serving skew, or replay a request.');
+    if(!on.has('latency_ms'))add('⚠️','No <code>latency_ms</code>: slow requests are invisible in logs (metrics still help).');
+    if(!on.has('ts'))add('❌','No timestamp: events can\'t be ordered or windowed.');
+    if(on.has('user_id_hash'))add('✅','A pseudonymous ID lets you join predictions with delayed labels without storing who the user is.');
+    if(on.has('trace_id'))add('✅','<code>trace_id</code> links this line to an OpenTelemetry trace across services.');
+    if(fmt==='text')add('⚠️','Unstructured text: answering "all requests over 500 ms on v2.1" needs fragile regexes. With JSON it\'s one <code>jq select()</code>.');
+    if(!W.some(x=>/❌|🔒|⚠️/.test(x)))add('✅','Debuggable, joinable and privacy-safe. Ship it (and sample INFO lines if volume is high).');
+    $('#logWarn').innerHTML=W.join('')}
+  box.onchange=draw;$$('#logFmt button').forEach(b=>b.onclick=()=>{fmt=b.dataset.f;$$('#logFmt button').forEach(x=>x.classList.toggle('on',x===b));draw()});draw()})();
+
+/* ---------------- 06 SLO calculator ---------------- */
+(function(){function draw(){const t=+$('#sloT').value,R=+$('#sloR').value*1e6,e=+$('#sloE').value/100;$('#sloRV').textContent=(R/1e6).toFixed(1)+'M';$('#sloEV').textContent=(e*100).toFixed(2);
+  const budget=1-t,allowed=Math.round(R*budget),mins=30*24*60*budget,burn=e/budget,days=burn>0?30/burn:Infinity;const fmtT=d=>d===Infinity?'never':d<1?(d*24).toFixed(1)+' h':d.toFixed(1)+' days';
+  $('#sloFacts').innerHTML=`<div class="fact"><b>${allowed.toLocaleString('en-IN')}</b><span>failed requests allowed / 30 d</span></div><div class="fact"><b>${mins<60?mins.toFixed(1)+' min':(mins/60).toFixed(1)+' h'}</b><span>equivalent full downtime</span></div><div class="fact"><b>${burn.toFixed(1)}×</b><span>burn rate</span></div><div class="fact"><b>${fmtT(days)}</b><span>until budget is gone</span></div>`;
+  const v=$('#sloVerdict');let c,m;if(burn>=14.4){c='bad';m=`Page now. At ${burn.toFixed(1)}× the whole month's budget is gone in ${fmtT(days)}. (Google SRE guidance: page when the 1-hour burn rate exceeds 14.4×, i.e. 2% of a 30-day budget in one hour.)`}
+    else if(burn>=6){c='bad';m=`Page. Burn rate ${burn.toFixed(1)}× (≥ 6× over 6 hours spends 5% of the budget).`}
+    else if(burn>1){c='warn';m=`Ticket, not a page: you're spending budget ${burn.toFixed(1)}× faster than planned and will run out in ${fmtT(days)}.`}
+    else{c='ok';m=`Within budget (${burn.toFixed(2)}×). Spare budget can be spent on risky releases and experiments.`}v.className='verdict '+c;v.textContent=m}
+  ['sloT','sloR','sloE'].forEach(id=>$('#'+id).oninput=draw);$('#sloT').onchange=draw;draw()})();
+
+/* ---------------- 07 cookbook ---------------- */
+(function(){const R=[
+ {k:'Deploy',t:'Roll back a bad model in under a minute',p:'A new model version is live and something looks wrong.',tags:['Argo Rollouts','MLflow'],s:['Stop the bleeding first: abort or undo the rollout. Investigate later.','If serving loads by registry alias, point the alias back to the previous version.','Confirm with metrics: error rate, latency, prediction mix back to normal.','Write down what the release checks missed and add a gate for it.'],
+  c:`kubectl argo rollouts abort iris-api          # mid-canary
+kubectl argo rollouts undo iris-api           # after promotion
+python scripts/promote.py --name iris-classifier \\
+  --version 2 --alias champion               # registry-driven serving`,g:'Rollback only works if the previous image and model still exist. Keep N-1 versions and never delete the previous champion.'},
+ {k:'Deploy',t:'Shadow-test a challenger on live traffic',p:'You want real-world evidence for a risky model without users seeing its output.',tags:['Istio / NGINX mirroring','logs'],s:['Deploy the challenger as a separate service.','Mirror 100% (or a sample) of requests to it; discard its responses.','Log both predictions with the same request_id.','Compare agreement, latency and error rate offline; then canary it.'],
+  c:`# Istio VirtualService
+http:
+  - route: [{ destination: { host: iris-champion } }]
+    mirror: { host: iris-challenger }
+    mirrorPercentage: { value: 100 }`,g:'Never shadow endpoints with side effects (sending emails, charging cards). Mirror only pure predictions.'},
+ {k:'Monitor',t:'Weekly drift check as a scheduled job',p:'Nobody looks at drift unless it is automatic.',tags:['Kubernetes CronJob','Evidently','Pushgateway'],s:['Sample last week\'s logged features into a file.','Compare with the serving model\'s training reference (PSI / KS per feature).','Push per-feature PSI as a metric; save the HTML report.','Alert (ticket severity) when PSI > 0.25 on an important feature.'],
+  c:`apiVersion: batch/v1
+kind: CronJob
+metadata: { name: drift-weekly }
+spec:
+  schedule: "0 2 * * 1"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: drift
+              image: ketan/iris-monitor:1.3
+              args: ["--reference", "s3://ml/ref/v2.parquet",
+                     "--current",   "s3://ml/logs/last_7d.parquet"]`,g:'Update the reference when you ship a new model. Comparing against an old model\'s training data reports permanent "drift".'},
+ {k:'Reproduce',t:'Reproduce any past model exactly',p:'Audit or a bug report asks: “what exactly produced the model that served on 3 March?”',tags:['git','DVC','MLflow'],s:['Find the registry version → its MLflow run → the git commit it logged.','Check out that commit and its DVC-tracked data.','Rebuild in the same image (by digest) and re-run the pipeline.','Compare metrics and model hash with the registered artifact.'],
+  c:`git checkout 7c1e2f0
+dvc checkout              # data + model exactly as in dvc.lock
+docker run --rm -v "$PWD":/w -w /w \\
+  ghcr.io/ketan/iris-train@sha256:4b1d… dvc repro
+dvc metrics diff 7c1e2f0`,g:'Log the git SHA, data version and image digest as run tags. Without them this recipe is archaeology.'},
+ {k:'Debug',t:'Debug a p95 latency spike',p:'HighLatencyP95 is paging you.',tags:['Prometheus','kubectl','traces'],s:['Is it everyone or one version / pod / route? Break p95 down by label.','Check saturation: CPU, memory, GPU, queue depth (<code>kubectl top</code>).','Check dependencies: feature store, DB and downstream latency in traces.','Mitigate (scale out, roll back), then fix the root cause (batching, model size, timeouts).'],
+  c:`histogram_quantile(0.95,
+  sum(rate(prediction_latency_seconds_bucket[5m]))
+  by (le, model_version))
+kubectl top pods -l app=iris-api
+kubectl autoscale deploy iris-api --min=3 --max=12 --cpu-percent=70`,g:'Averages hide tail latency. Always graph p95/p99, and set CPU requests so the autoscaler has something to work with.'},
+ {k:'Monitor',t:'Monitor accuracy when labels arrive late',p:'Ground truth takes days or weeks (fraud chargebacks, loan defaults).',tags:['logs','warehouse','proxies'],s:['Log a stable join key (hashed ID or request_id) with every prediction.','Until labels land, watch proxies: prediction mix, confidence, data drift.','Join labels as they arrive; compute metrics per week and model version.','Backfill dashboards; alert on the latest complete window only.'],
+  c:`SELECT p.model_version,
+       date_trunc('week', p.ts) AS week,
+       avg((p.prediction = l.label)::int) AS accuracy,
+       count(l.label) * 1.0 / count(*)   AS label_coverage
+FROM predictions p LEFT JOIN labels l USING (request_id)
+GROUP BY 1, 2 ORDER BY 2;`,g:'Report label coverage next to accuracy. A 98% accuracy on 3% of labels means little.'},
+ {k:'Data',t:'Change a feature safely',p:'You want to rename, rescale or add a feature without breaking serving.',tags:['schema contracts','feature store','CI'],s:['Version the feature definition; never change meaning under the same name.','Compute it in one shared library or feature store for training and serving.','Add a contract test in CI: the API payload schema matches what the model expects.','Release the model and the client change together, by canary.'],
+  c:`# CI contract test (pytest)
+def test_serving_schema_matches_model():
+    model_cols = load_model("models:/iris@challenger").feature_names_in_
+    api_cols = RequestSchema.model_fields.keys()
+    assert list(model_cols) == list(api_cols)`,g:'This is exactly the iris-api 2.1 incident in the lab: a renamed field arrived as null. A contract test would have failed the PR.'},
+ {k:'Governance',t:'Log predictions without leaking PII',p:'Logs are copied into many tools and kept for a long time.',tags:['logging','privacy'],s:['Decide which fields are needed for debugging, drift and audit; log only those.','Hash identifiers with a secret salt; drop free-text fields.','Sample INFO logs if volume is high; keep all errors.','Set retention per log type and restrict who can query raw prediction logs.'],
+  c:`import hashlib, hmac, os, json, logging
+SALT = os.environ["LOG_SALT"].encode()
+def pseudo(x): return hmac.new(SALT, x.encode(), hashlib.sha256).hexdigest()[:16]
+log.info(json.dumps({"request_id": rid, "user": pseudo(user_id),
+                     "model_version": VERSION, "prediction": y}))`,g:'Plain (unsalted) hashes of emails or phone numbers can be reversed by guessing. Use a keyed hash.'},
+ {k:'Governance',t:'Decide when to retrain',p:'Retrain too rarely and the model rots; too eagerly and you ship noise or bad data.',tags:['policy','CT'],s:['Triggers: schedule (safety net), drift ticket, labelled-performance drop.','Always gate: data validation → train → beat champion on <i>recent</i> data.','Human review or automated canary decides production.','Record the trigger reason on the run and in the PR.'],
+  c:`retrain if any of:
+  weekly schedule                         (safety net)
+  max(feature_psi on top-5 features) > 0.25 for 1 day
+  labelled accuracy < SLO on last full week
+and only promote if:
+  data validation passes
+  challenger ≥ champion − 0.005 on recent holdout
+  latency and size within budget`,g:'If drift came from an upstream bug, retraining teaches the model the bug. Fix data first.'}];
+  const cats=['All',...new Set(R.map(r=>r.k))];let cur='All';const fl=$('#recFilter');
+  cats.forEach(c=>{const b=document.createElement('button');b.className='cchip'+(c==='All'?' on':'');b.textContent=c;b.onclick=()=>{cur=c;$$('.cchip',fl).forEach(x=>x.classList.toggle('on',x===b));draw()};fl.appendChild(b)});
+  function draw(){const el=$('#recipes');el.innerHTML='';R.filter(r=>cur==='All'||r.k===cur).forEach(r=>{const d=document.createElement('div');d.className='card recipe';
+    d.innerHTML=`<div class="labtag">${r.k}</div><h3>${r.t}</h3><div class="tags">${r.tags.map(x=>`<span>${x}</span>`).join('')}</div><p class="small muted" style="margin:0">${r.p}</p><ol>${r.s.map(x=>`<li>${x}</li>`).join('')}</ol><div class="row2"><b class="small">Commands</b><button class="btn ghost" style="padding:3px 10px;font-size:12.5px">Copy</button></div><pre>${esc(r.c)}</pre><div class="gotcha">⚠️ <b>Gotcha:</b> ${r.g}</div>`;
+    copyBtn($('button',d),r.c);el.appendChild(d)})}draw()})();
+
+/* ---------------- 08 maturity checklist ---------------- */
+(function(){const G=[['Versioning & reproducibility',['Code in git with PR reviews','Data versioned (DVC, lakeFS, Delta)','Environments pinned (lockfile / image)','Every experiment tracked (MLflow, W&B)']],
+  ['Testing & validation',['Unit tests for features and preprocessing','Data validation inside the pipeline','Quality gate: challenger vs champion','Train/serve parity or contract test']],
+  ['Automation',['Training is a pipeline, not a notebook','Continuous training on new data / triggers','CI runs on every pull request','CD deploys registry models to staging automatically']],
+  ['Deployment',['Model registry with versions and aliases','Progressive delivery (canary / shadow)','One-command rollback, practised','Image built once, promoted by digest']],
+  ['Monitoring',['System golden signals with alerts','Data quality and drift monitoring','Model performance with labels or proxies','SLOs with runbooks for each page']],
+  ['Governance',['Model cards / documentation per model','Lineage: data → run → model → deployment','Secrets and access control (no keys in code)','PII and retention policy for prediction logs']]];
+  const PRI=['Code in git with PR reviews','Every experiment tracked (MLflow, W&B)','Environments pinned (lockfile / image)','Training is a pipeline, not a notebook','Data versioned (DVC, lakeFS, Delta)','Model registry with versions and aliases','System golden signals with alerts','CI runs on every pull request','Data validation inside the pipeline','Quality gate: challenger vs champion','One-command rollback, practised','Data quality and drift monitoring'];
+  const el=$('#chk');G.forEach(([h,items])=>{const d=document.createElement('div');d.className='card';d.innerHTML=`<h3>${h}</h3>`+items.map(i=>`<label><input type="checkbox" data-i="${esc(i)}"> ${i}</label>`).join('');el.appendChild(d)});
+  function draw(){const on=$$('input',el).filter(x=>x.checked).map(x=>x.dataset.i);const n=on.length;const lvl=n>=18?2:n>=8?1:0;$('#matScore').textContent=`${n} / 24`;$('#matBar').style.width=(n/24*100)+'%';
+    $('#matLevel').textContent=['≈ Level 0: manual process','≈ Level 1: ML pipeline automation','≈ Level 2: CI/CD pipeline automation'][lvl];$$('#lvl div').forEach(d=>d.classList.toggle('on',+d.dataset.l===lvl));
+    const next=PRI.filter(p=>!on.includes(p)).slice(0,3);const rest=G.flatMap(g=>g[1]).filter(p=>!on.includes(p)&&!PRI.includes(p)).slice(0,3-next.length);const all=next.concat(rest);
+    $('#matNext').innerHTML=all.length?'<b>Next three to tackle:</b> '+all.map(x=>`<span class="badge b-gray" style="margin:2px">${x}</span>`).join(' '):'<b>All 24 ticked.</b> Now measure: lead time for a model change, rollback time, and how often monitoring catches issues before users do.'}
+  el.onchange=draw;$('#matReset').onclick=()=>{$$('input',el).forEach(x=>x.checked=false);draw()};draw()})();
+
+/* ---------------- reference / quiz / activities ---------------- */
+renderReference([
+ ['logs','tail -n 20 logs/predictions.jsonl','Last lines of a log file'],['logs','grep -c \'"level":"ERROR"\' FILE','Count error lines'],['logs','grep req-7f3a2b logs/*.jsonl','Follow one request across services'],['logs','kubectl logs deploy/iris-api --tail=100 -f','Stream pod logs'],['logs','kubectl logs POD --previous','Logs from before the last crash'],
+ ['jq',`jq -c 'select(.level=="ERROR")' FILE`,'Filter JSON lines by a field'],['jq',`jq -c '{ts, request_id, error}' FILE`,'Keep only some fields'],['jq',`jq -r '.model_version' FILE | sort | uniq -c`,'Count by value (group-by)'],['jq',`jq -c 'select(.latency_ms > 500)' FILE`,'Find slow requests'],['jq',`jq '.features.petal_width' FILE`,'Read a nested field'],
+ ['prometheus','curl -s localhost:8000/metrics','See the metrics an app exposes'],['prometheus',`sum(rate(http_requests_total[5m]))`,'PromQL: throughput (req/s)'],['prometheus',`sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))`,'PromQL: error rate (SLI)'],['prometheus',`histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))`,'PromQL: p95 latency'],['prometheus',`promtool query instant http://localhost:9090 'EXPR'`,'Run a PromQL query from the shell'],['prometheus','promtool check rules alerts.yml','Validate alerting rules before deploying them'],
+ ['alerts','amtool alert query','List active alerts'],['alerts','amtool silence add alertname=HighLatencyP95 --duration=1h -c "deploying fix"','Silence an alert during maintenance'],['alerts','kubectl top pods','CPU / memory per pod'],['alerts','kubectl autoscale deploy iris-api --min=3 --max=12 --cpu-percent=70','Add a HorizontalPodAutoscaler'],
+ ['drift','python monitor/drift_report.py --reference REF --current CUR','Per-feature PSI / KS drift report'],['drift','evidently: Report(metrics=[DataDriftPreset()]).run(reference_data=ref, current_data=cur)','Evidently drift report in Python'],['drift','great_expectations checkpoint run CHECKPOINT','Run data validation expectations'],['drift','python monitor/performance.py --labels FILE','Join predictions with delayed labels'],
+ ['retrain','gh workflow run retrain.yml -f reason=drift','Trigger continuous-training workflow'],['retrain','gh run watch','Follow the run'],['retrain','gh pr view 57 / gh pr merge 57 --squash','Review and approve the model change'],['retrain','kubectl argo rollouts abort iris-api','Mitigate a bad release immediately']
+],['logs','jq','prometheus','alerts','drift','retrain']);
+renderQuiz([
+ ['Latency and error rate have been flat for weeks, but customers say predictions got worse. What were you missing?',['More replicas','Model- and data-level monitoring (drift, prediction mix, labelled accuracy)','A faster GPU','Debug-level logs'],1,'System metrics only tell you the service is up and fast, not that its answers are right.'],
+ ['Inputs look unchanged, but the same inputs now lead to different correct answers. Which drift is this?',['Data (covariate) drift','Concept drift','Training-serving skew','Label noise'],1,'Concept drift changes P(y|X); you see it in performance once labels arrive.'],
+ ['PSI for petal_length is 0.41. What is the best first step?',['Retrain immediately','Ignore it, PSI is noisy','Check upstream for a data bug, then confirm with labelled performance','Delete the feature'],2,'Drift is a signal to investigate. Retraining on buggy data bakes the bug in.'],
+ ['Which jq command counts errors per model version?',[`jq '.error' FILE | wc -l`,`jq -r 'select(.level=="ERROR") | .model_version' FILE | sort | uniq -c`,`grep ERROR FILE`,`jq -c '.' FILE`],1,'Filter with select(), extract the field with -r, then sort | uniq -c to count.'],
+ ['Which PromQL gives p95 latency from a histogram?',['avg(prediction_latency_seconds)','histogram_quantile(0.95, sum(rate(prediction_latency_seconds_bucket[5m])) by (le))','max(prediction_latency_seconds_count)','rate(http_requests_total[5m])'],1,'Quantiles are estimated from bucket rates aggregated by the le label.'],
+ ['Why add `for: 5m` to an alert rule?',['To make it fire faster','So short blips don\'t page anyone','To delete old data','It is required syntax'],1,'The condition must hold for the whole window before the alert fires.'],
+ ['SLO 99.9%, current error rate 1.5%. Roughly what burn rate is that, and what do you do?',['0.15×, nothing','1.5×, ticket','15×, page now','150×, ignore'],2,'Burn = 1.5% / 0.1% = 15×, above the 14.4× fast-burn paging threshold.'],
+ ['Which field is most important to add to every prediction log line?',['host','model_version','user_email','python_version'],1,'Without it you can\'t attribute errors or quality to a specific model version.'],
+ ['A drift alert fires. In a mature (Level 1+) setup, what should happen?',['Someone retrains in a notebook','A gated retraining pipeline runs; a validated challenger is proposed for canary','The model is deleted','Alerts are silenced'],1,'Continuous training with validation and champion/challenger gates closes the loop safely.']]);
+renderActivities([
+ ['Incident timeline','Observability lab · Scenario A',['Using only jq/grep, find when the first ERROR happened and which version caused it.','Count affected requests.','Write a 5-line incident summary: impact, cause, mitigation, fix, follow-up.']],
+ ['Tune an alert','Section 06 + Scenario B',['Pick an SLO for iris-api (latency and errors).','Compute the burn rate during the load test.','Rewrite HighLatencyP95 as a burn-rate alert. Is it a page or a ticket?']],
+ ['Drift detective','Section 03 drift lab',['Find a preset where KS says "significant" but PSI says "stable". Explain.','Find the slider values that just cross PSI 0.25.','Why does the "broken upstream join" preset get a different verdict?']],
+ ['Design the log line','Section 04 log builder',['Design a log line for a loan-approval model.','Which fields are PII? How will you pseudonymise them?','Which fields let you join with defaults that arrive 6 months later?']],
+ ['Close the loop','Observability lab · Scenario C',['Run the drift report for weeks 45, 46 and 47 against both references.','Explain why comparing with the wrong reference gives permanent "drift".','List the gates the retrain workflow passes before a human sees the PR.']],
+ ['Maturity plan','Section 08 · team exercise',['Tick the checklist for a real project.','Pick the next three practices and an owner for each.','What would you measure to show the improvement worked?']]]);
+initToc();
+
+</script>
+</body>
+</html>

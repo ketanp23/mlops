@@ -1,0 +1,1660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI/CD, ML Pipelines & Model Deployment Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f3ee;--paper:#fff;--paper2:#fbfaf6;--ink:#14161b;--muted:#5b616d;--line:#e2dfd5;
+  --docker:#1d63ed;--k8s:#326ce5;--teal:#0d9488;--ok:#15803d;--warn:#b45309;--err:#b91c1c;
+  --term:#0d1117;--term-ink:#d1d9e6;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+code,kbd,.mono{font-family:var(--mono);font-size:.9em}
+p code,li code,td code,.note code{background:#ecebe4;border:1px solid #dcd9ce;border-radius:5px;padding:1px 5px}
+a{color:var(--docker)}
+button{font:inherit;cursor:pointer}
+
+/* header */
+header.top{position:sticky;top:0;z-index:30;background:rgba(244,243,238,.93);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 20px 8px;max-width:1200px;margin:auto}
+.brand{font:600 14px var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .tag{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;background:var(--ink);color:#fff;border-radius:4px;padding:2px 6px;margin-right:8px}
+.pct{margin-left:auto;font:500 12px var(--mono);color:var(--muted);white-space:nowrap}
+.progress{height:3px;background:linear-gradient(90deg,var(--docker),var(--teal));width:0;transition:width .1s}
+.toc{display:flex;gap:6px;overflow-x:auto;padding:0 20px 10px;max-width:1200px;margin:auto;scrollbar-width:none}
+.toc::-webkit-scrollbar{display:none}
+.toc a{white-space:nowrap;font-size:12.5px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;color:var(--muted);text-decoration:none;background:var(--paper)}
+.toc a b{font-family:var(--mono);font-weight:500;margin-right:4px;color:#9a9ea8}
+.toc a.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.toc a.on b{color:#aab}
+
+main{max-width:1200px;margin:auto;padding:0 20px 60px}
+.hero{padding:56px 0 18px}
+.hero h1{font-size:clamp(34px,6vw,58px);line-height:1.04;letter-spacing:-.02em;margin:.25em 0 .3em}
+.hero p{font-size:clamp(16px,2.2vw,19px);color:var(--muted);max-width:780px;margin:0}
+.hero .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.pill{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:5px 11px}
+section{padding:60px 0 6px;scroll-margin-top:96px;border-top:1px solid var(--line);margin-top:40px}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.09em;color:var(--docker);text-transform:uppercase}
+.eyebrow.k{color:var(--k8s)}
+h2{font-size:clamp(26px,4vw,38px);line-height:1.12;margin:.35em 0 .35em;letter-spacing:-.015em}
+h3{font-size:19px;margin:0 0 .4em}
+.lede{color:var(--muted);max-width:800px;font-size:17px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:820px){.grid2,.grid3{grid-template-columns:1fr}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:20px}
+.card p:last-child{margin-bottom:0}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;border-radius:9px;padding:7px 13px;font-size:14px;font-weight:500}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn.ghost:hover{border-color:var(--ink)}
+.btn.blue{background:var(--docker);border-color:var(--docker)}
+.btn.kb{background:var(--k8s);border-color:var(--k8s)}
+.btn.warn{background:#fff7ed;color:var(--warn);border-color:#fed7aa}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.labtag{display:inline-block;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--teal);margin-bottom:8px}
+.callout{border-left:3px solid var(--docker);background:#eef3fe;padding:12px 16px;border-radius:0 10px 10px 0;margin:18px 0;font-size:15px}
+.callout.k{border-color:var(--k8s)}
+.callout.amber{border-color:#d97706;background:#fff7ed}
+
+/* table */
+.tbl{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.tbl th,.tbl td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{background:var(--paper2);font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tbl tr:last-child td{border-bottom:0}
+.scrollx{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* 01 works on my machine */
+.env{font:13px/1.7 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.env .bad{color:var(--err);font-weight:600}
+.env .good{color:var(--ok);font-weight:600}
+.miniterm{background:var(--term);color:var(--term-ink);font:12.5px/1.55 var(--mono);border-radius:10px;padding:12px 14px;min-height:150px;white-space:pre-wrap;word-break:break-word}
+.miniterm .e{color:#ff7b72}.miniterm .o{color:#7ee787}.miniterm .d{color:#8b949e}.miniterm .p{color:#79c0ff}
+
+/* 02 stacks */
+.stacks{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:700px){.stacks{grid-template-columns:1fr}}
+.stack{display:flex;flex-direction:column;gap:5px}
+.stack .row{display:flex;gap:5px}
+.blk{flex:1;text-align:center;border-radius:7px;padding:7px 4px;font:500 12.5px var(--mono);border:1px solid rgba(0,0,0,.06)}
+.b-app{background:#dbeafe;color:#1e3a8a}.b-lib{background:#e0f2fe;color:#075985}.b-gos{background:#fde68a;color:#78350f}
+.b-hyp{background:#fecaca;color:#7f1d1d}.b-rt{background:#bbf7d0;color:#14532d}.b-os{background:#e5e7eb;color:#1f2937}.b-hw{background:#374151;color:#f9fafb}
+.stack h3{display:flex;justify-content:space-between;align-items:baseline}
+.stack h3 span{font:500 12px var(--mono);color:var(--muted)}
+.pack{margin-top:18px}
+.pack input[type=range]{width:100%;accent-color:var(--docker)}
+.meter{margin:12px 0}
+.meter .lbl{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.bar{height:16px;background:#ecebe4;border-radius:99px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .25s}
+.bar .vm{background:#f59e0b}.bar .ct{background:var(--docker)}
+.bar.over i{background:var(--err)!important}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+@media (max-width:700px){.facts{grid-template-columns:1fr 1fr}}
+.fact{background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.fact b{display:block;font:600 20px var(--sans)}
+.fact span{font-size:12.5px;color:var(--muted)}
+
+/* 04 flow */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;align-items:stretch;margin:18px 0 6px}
+@media (max-width:820px){.flow{grid-template-columns:1fr}}
+.station{background:var(--paper);border:1.5px solid var(--line);border-radius:12px;padding:12px;text-align:center;transition:.2s;position:relative}
+.station .where{font:500 11px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.station .what{font-weight:600;margin-top:4px}
+.station .ico{font-size:24px}
+.station.hi{border-color:var(--docker);background:#eef3fe;box-shadow:0 0 0 3px rgba(29,99,237,.12)}
+.station.src{border-color:#d97706;background:#fff7ed}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.cchip{font:500 13px var(--mono);border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:6px 10px}
+.cchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.explain{min-height:72px}
+
+/* LAB */
+.lab{border:1px solid var(--line);border-radius:16px;background:var(--paper);overflow:hidden;margin-top:24px;box-shadow:0 1px 0 rgba(0,0,0,.02),0 10px 30px -18px rgba(0,0,0,.18)}
+.lab-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--line);background:var(--paper2)}
+.lab-title{font:600 13px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--teal)}
+.scen-desc{font-size:14px;color:var(--muted);margin-top:2px;max-width:640px}
+.lab-actions{display:flex;align-items:center;gap:10px}
+.step-prog{font:500 12px var(--mono);color:var(--muted)}
+.scen-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.scen-tabs::-webkit-scrollbar{display:none}
+.tab{border:0;background:transparent;padding:12px 16px;font-size:14px;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+.tab span{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;display:block;color:#9a9ea8}
+.tab.on{color:var(--ink);border-bottom-color:var(--docker);font-weight:600}
+.tab.on span{color:var(--docker)}
+.lab.kube .tab.on{border-bottom-color:var(--k8s)}
+.lab-grid{display:grid;grid-template-columns:330px 1fr;min-height:540px}
+@media (max-width:900px){.lab-grid{grid-template-columns:1fr}}
+.guide{border-right:1px solid var(--line);padding:14px 14px 18px;background:#fdfdfb;max-height:860px;overflow:auto}
+@media (max-width:900px){.guide{border-right:0;border-bottom:1px solid var(--line);max-height:none}}
+.guide summary{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);cursor:pointer;margin:4px 0 8px}
+.guide ol{margin:0;padding:0;list-style:none;counter-reset:s}
+.guide ol li{counter-increment:s;position:relative;padding:7px 0 9px 30px;border-bottom:1px dashed #ebe9e1}
+.guide ol li::before{content:counter(s);position:absolute;left:0;top:8px;width:21px;height:21px;border-radius:50%;background:#efede6;color:var(--muted);font:600 11px/21px var(--mono);text-align:center}
+.guide ol li.done::before{content:'✓';background:var(--ok);color:#fff}
+.guide ol li.next::before{background:var(--docker);color:#fff}
+.lab.kube .guide ol li.next::before{background:var(--k8s)}
+.guide ol li.done .cmdchip{opacity:.6}
+.cmdchip{display:inline-block;text-align:left;font:500 12.5px/1.45 var(--mono);background:#f1f0ea;border:1px solid #dedbd0;border-radius:6px;padding:3px 7px;color:var(--ink);word-break:break-all}
+.cmdchip:hover{border-color:var(--ink);background:#fff}
+li.next .cmdchip{background:#eef3fe;border-color:#bfd2fb}
+.guide .note{font-size:13.5px;color:var(--muted);margin-top:4px;line-height:1.5}
+.guide ul{margin:0;padding:0;list-style:none}
+.guide ul li{padding:6px 0 8px;border-bottom:1px dashed #ebe9e1}
+.guide ul li .cmdchip{background:#fff7ed;border-color:#fed7aa}
+.work{padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+
+.term{background:var(--term);color:var(--term-ink);border-radius:12px;font:13px/1.55 var(--mono);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.t-bar{display:flex;align-items:center;gap:6px;padding:9px 12px;background:#161b22;border-bottom:1px solid #21262d}
+.t-bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57;display:inline-block}
+.t-bar i:nth-child(2){background:#febc2e}.t-bar i:nth-child(3){background:#28c840}
+.t-name{margin-left:8px;color:#8b949e;font-size:12px}
+.t-body{height:400px;overflow:auto;padding:12px 14px;cursor:text;-webkit-overflow-scrolling:touch}
+@media (max-width:600px){.t-body{height:340px;font-size:12px}}
+.ln{white-space:pre;min-height:1.55em}
+.ln.err{color:#ff7b72}.ln.ok{color:#7ee787}.ln.dim{color:#8b949e;white-space:pre-wrap}.ln.hl{color:#e3b341}
+.ln.cmd{color:#fff;margin-top:4px;white-space:pre-wrap;word-break:break-all}
+.ln.cmd .p,.t-prompt{color:#79c0ff}
+.t-line{display:flex;align-items:center;gap:6px;margin-top:4px}
+.t-prompt{white-space:pre}
+.t-in{flex:1;min-width:40px;background:transparent;border:0;color:#fff;font:inherit;outline:none;caret-color:#7ee787;padding:0}
+@media (max-width:600px){.t-in{font-size:16px}}
+.suggest>span{font-size:12.5px;color:var(--muted);display:block;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font:500 12.5px var(--mono);border:1px solid var(--line);background:var(--paper2);border-radius:7px;padding:5px 9px;color:var(--ink);text-align:left;word-break:break-all}
+.chips button:first-child{border-color:#9db8f6;background:#eef3fe}
+.chips button:hover{border-color:var(--ink)}
+.extra:empty{display:none}
+
+/* docker viz */
+.viz{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper2)}
+.viz h4{margin:0 0 8px;font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.dviz{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+@media (max-width:700px){.dviz{grid-template-columns:1fr}}
+.vbox{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--paper)}
+.vbox.reg{border-style:dashed}
+.vh{font:600 12.5px var(--sans);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.vh small{font:500 11px var(--mono);color:var(--muted)}
+.vsec{margin-top:8px}
+.vsec>b{display:block;font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:#8a8f99;margin-bottom:4px}
+.vchips{display:flex;flex-wrap:wrap;gap:5px}
+.vc{font:500 11.5px/1.35 var(--mono);border-radius:6px;padding:3px 7px;border:1px solid var(--line);background:var(--paper2)}
+.vc.img{background:#eef3fe;border-color:#c9d8fb;color:#1e3a8a}
+.vc.run{background:#ecfdf3;border-color:#a7e3bf;color:#14532d}
+.vc.run::before{content:'● ';color:#16a34a}
+.vc.stop{background:#f3f4f6;color:#6b7280}
+.vc.stop::before{content:'○ '}
+.vc.vol{background:#fdf4ff;border-color:#f0c6f7;color:#701a75}
+.vc.net{background:#f0fdfa;border-color:#a7ece0;color:#115e59}
+.vc .sub{display:block;font-size:10.5px;opacity:.8}
+.empty{font-size:12px;color:#9a9ea8;font-style:italic}
+
+/* k8s viz */
+.kviz .cp{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1.5px solid #c9d6f7;background:#f3f6fe;border-radius:10px;padding:8px 10px;margin-bottom:10px}
+.kviz .cp b{font:600 12px var(--sans);margin-right:4px}
+.kviz .cp span{font:500 11px var(--mono);background:#fff;border:1px solid #c9d6f7;border-radius:5px;padding:2px 6px;color:#1e40af}
+.nodes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:700px){.nodes{grid-template-columns:1fr}}
+.node{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:8px;min-height:92px;transition:.3s}
+.node .nh{display:flex;justify-content:space-between;align-items:center;gap:6px;font:600 12px var(--mono);margin-bottom:6px}
+.node .st{font:600 10px var(--mono);padding:1px 6px;border-radius:99px;background:#dcfce7;color:#166534;white-space:nowrap}
+.node.down{background:repeating-linear-gradient(135deg,#fef2f2,#fef2f2 8px,#fff 8px,#fff 16px);border-color:#fca5a5}
+.node.down .st{background:#fee2e2;color:#991b1b}
+.node.cord{border-style:dashed;border-color:#f59e0b}
+.node.cord .st{background:#fef3c7;color:#92400e}
+.pods{display:flex;flex-wrap:wrap;gap:5px}
+.pod{font:500 10.5px/1.3 var(--mono);border-radius:7px;padding:4px 6px;color:#fff;min-width:64px;position:relative;transition:.3s}
+.pod small{display:block;opacity:.85;font-size:9.5px}
+.pod.ContainerCreating,.pod.Pending{opacity:.55;animation:pulse 1s infinite alternate}
+.pod.Terminating{opacity:.3;text-decoration:line-through}
+.pod.ErrImagePull,.pod.ImagePullBackOff{background:#fff!important;color:var(--err);border:1.5px dashed var(--err)}
+@keyframes pulse{from{opacity:.35}to{opacity:.8}}
+.krow{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;font:500 11.5px var(--mono)}
+.krow .k{border:1px solid var(--line);background:var(--paper);border-radius:6px;padding:3px 7px}
+.krow .k b{color:var(--k8s)}
+.pending-pods{margin-top:8px}
+.kbtns{display:flex;flex-wrap:wrap;gap:6px}
+.kbtns .btn{font-size:13px;padding:5px 10px}
+
+/* layers lab */
+.layers{font:13px/1.5 var(--mono);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--paper)}
+.layer{display:grid;grid-template-columns:1fr 120px;gap:8px;padding:8px 12px;border-bottom:1px solid #eeece5;align-items:center}
+.layer:last-child{border-bottom:0}
+.layer code{background:none;border:0;padding:0;word-break:break-all}
+.layer .res{text-align:right;font-size:12px;font-weight:600}
+.layer.cached .res{color:var(--ok)}
+.layer.built .res{color:var(--warn)}
+.layer.built{background:#fffaf0}
+.layer.meta{color:#8a8f99}
+.buildlog{font:12.5px/1.6 var(--mono);background:var(--paper2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:160px;overflow:auto;margin-top:10px}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.toggle button{border:0;background:var(--paper);padding:7px 12px;font-size:13.5px}
+.toggle button.on{background:var(--ink);color:#fff}
+
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr;gap:12px}
+.cpbox{border:2px solid #c9d6f7;background:#f3f6fe;border-radius:14px;padding:12px}
+.cpbox>.t,.wbox>.t{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:#1e40af;margin-bottom:8px}
+.comps{display:flex;flex-wrap:wrap;gap:8px}
+.comp{border:1.5px solid #c9d6f7;background:#fff;border-radius:10px;padding:8px 12px;font:600 13px var(--mono);color:#1e3a8a;transition:.2s}
+.comp:hover{border-color:var(--k8s)}
+.comp.hi{background:var(--k8s);color:#fff;border-color:var(--k8s);box-shadow:0 0 0 4px rgba(50,108,229,.18)}
+.wnodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:760px){.wnodes{grid-template-columns:1fr}}
+.wbox{border:2px solid var(--line);border-radius:14px;padding:12px;background:var(--paper)}
+.wbox>.t{color:var(--muted)}
+.wbox .comp{border-color:var(--line);color:var(--ink)}
+.wbox .comp.hi{background:var(--k8s);color:#fff}
+.podmini{display:inline-block;font:500 11px var(--mono);background:#e0e7ff;color:#3730a3;border-radius:6px;padding:3px 7px;margin:2px}
+.kctl{display:flex;align-items:center;gap:8px}
+.archinfo{min-height:120px}
+.tracebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.dots{display:flex;gap:5px}
+.dots i{width:8px;height:8px;border-radius:50%;background:#d8d5cb;display:inline-block}
+.dots i.on{background:var(--k8s)}
+
+/* reference */
+.refbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:16px 0}
+.refbar input{flex:1;min-width:220px;border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:10px 14px;font:15px var(--sans)}
+.refbar input:focus{outline:2px solid var(--docker);border-color:transparent}
+.fchip{border:1px solid var(--line);background:var(--paper);border-radius:99px;padding:6px 12px;font-size:13px}
+.fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.ref td:first-child{white-space:nowrap}
+.ref td:first-child code{background:none;border:0;padding:0;font-size:13px;color:#1e3a8a}
+.ref .cat{font:500 11px var(--mono);text-transform:uppercase;color:var(--muted)}
+@media (max-width:700px){.ref td:first-child{white-space:normal}.ref .cathead{display:none}.ref td.catcell{display:none}}
+
+/* quiz */
+.quiz{max-width:820px}
+.qhead{display:flex;justify-content:space-between;font:500 13px var(--mono);color:var(--muted);margin-bottom:10px}
+.qtext{font-size:19px;font-weight:600;margin-bottom:14px}
+.opts{display:grid;gap:8px}
+.opt{text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:11px 14px;font:500 14.5px var(--mono)}
+.opt:hover:not(:disabled){border-color:var(--ink)}
+.opt.right{border-color:var(--ok);background:#ecfdf3}
+.opt.wrong{border-color:var(--err);background:#fef2f2}
+.opt:disabled{cursor:default}
+.qexp{margin-top:12px;font-size:15px;min-height:24px}
+.qnav{display:flex;justify-content:space-between;margin-top:16px}
+
+/* activities */
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.acts{grid-template-columns:1fr}}
+.act{position:relative}
+.act .num{font:600 12px var(--mono);color:var(--teal)}
+.act h3{margin-top:4px}
+.act ol{padding-left:20px;margin:8px 0 0;font-size:15px}
+.act label{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--muted);margin-top:12px;cursor:pointer}
+.act.done{border-color:#a7e3bf;background:#f6fdf9}
+
+.takeaways{counter-reset:t;list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:820px){.takeaways{grid-template-columns:1fr}}
+.takeaways li{counter-increment:t;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 52px;position:relative}
+.takeaways li::before{content:counter(t,decimal-leading-zero);position:absolute;left:16px;top:14px;font:600 14px var(--mono);color:var(--docker)}
+dl.gloss{display:grid;grid-template-columns:200px 1fr;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+dl.gloss dt,dl.gloss dd{margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+dl.gloss dt{font:600 14px var(--mono);background:var(--paper2)}
+@media (max-width:640px){dl.gloss{grid-template-columns:1fr}dl.gloss dt{border-bottom:0;padding-bottom:2px}}
+footer{border-top:1px solid var(--line);padding:30px 20px 50px;text-align:center;color:var(--muted);font-size:14px}
+
+
+/* ---- additions for MLOps labs ---- */
+.eyebrow.g{color:var(--teal)}
+.eyebrow.v{color:#7c3aed}
+/* pipeline strip */
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:14px 0}
+.stg{flex:1 1 110px;min-width:104px;border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 9px;font-size:13px;position:relative;transition:.25s}
+.stg .n{font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.stg .nm{font-weight:600;line-height:1.25;margin-top:2px}
+.stg .tm{font:500 11px var(--mono);color:var(--muted);margin-top:4px;min-height:14px}
+.stg.run{border-color:var(--docker);background:#eef3fe;animation:pulse2 .8s infinite alternate}
+.stg.ok{border-color:#86d3a5;background:#f0fbf4}
+.stg.ok .tm{color:var(--ok)}
+.stg.fail{border-color:#f5a3a3;background:#fef2f2}
+.stg.fail .tm{color:var(--err)}
+.stg.skip{opacity:.45}
+.stg.gate::after{content:'GATE';position:absolute;top:6px;right:7px;font:600 9px var(--mono);color:#b45309;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:0 4px}
+.stg.hl{border-color:var(--teal);box-shadow:0 0 0 3px rgba(13,148,136,.15)}
+.stg.dim{opacity:.35}
+@keyframes pulse2{from{box-shadow:0 0 0 0 rgba(29,99,237,.0)}to{box-shadow:0 0 0 4px rgba(29,99,237,.18)}}
+.faults{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0 4px}
+.faults label{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.plog{font:12.5px/1.6 var(--mono);background:var(--term);color:var(--term-ink);border-radius:10px;padding:10px 12px;min-height:120px;max-height:240px;overflow:auto;white-space:pre-wrap}
+.plog .e{color:#ff7b72}.plog .o{color:#7ee787}.plog .d{color:#8b949e}.plog .w{color:#e3b341}
+/* lab viz panels */
+.panels{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:820px){.panels{grid-template-columns:1fr}}
+.pnl{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:10px;min-width:0}
+.pnl .vh{margin-bottom:6px}
+.kv{display:flex;justify-content:space-between;gap:8px;font:500 12px var(--mono);padding:3px 0;border-bottom:1px dashed #eeece5}
+.kv:last-child{border-bottom:0}
+.kv span:first-child{color:var(--muted)}
+.badge{display:inline-block;font:600 10.5px var(--mono);padding:1px 7px;border-radius:99px;white-space:nowrap}
+.b-ok{background:#dcfce7;color:#166534}.b-fail{background:#fee2e2;color:#991b1b}.b-run{background:#dbeafe;color:#1e40af}.b-warn{background:#fef3c7;color:#92400e}.b-gray{background:#f3f4f6;color:#4b5563}.b-vio{background:#ede9fe;color:#5b21b6}
+.mstages{display:flex;flex-direction:column;gap:4px}
+.mst{display:flex;justify-content:space-between;align-items:center;font:500 12px var(--mono);border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:var(--paper2)}
+.mst.changed{border-color:#fcd34d;background:#fffbeb}
+.mst.running{border-color:#93c5fd;background:#eff6ff}
+.mst.fresh{border-color:#a7e3bf;background:#f0fbf4}
+/* traffic viz */
+.tbar{display:flex;height:26px;border-radius:8px;overflow:hidden;border:1px solid var(--line);font:600 11.5px/26px var(--mono);color:#fff;margin:6px 0}
+.tbar div{transition:width .5s;white-space:nowrap;overflow:hidden;text-align:center}
+.tb-a{background:#326ce5}.tb-b{background:#0d9488}.tb-bad{background:#dc2626}.tb-mirror{background:repeating-linear-gradient(135deg,#a78bfa,#a78bfa 6px,#c4b5fd 6px,#c4b5fd 12px)}
+.dots2{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.dots2 i{width:13px;height:13px;border-radius:4px;display:inline-block}
+.dots2 i.s{background:#326ce5}.dots2 i.c{background:#0d9488}.dots2 i.x{background:#dc2626}.dots2 i.p{opacity:.4;animation:pulse 1s infinite alternate}
+.stepdots{display:flex;gap:4px;align-items:center}
+.stepdots i{width:18px;height:6px;border-radius:3px;background:#e5e3dc;display:inline-block}
+.stepdots i.on{background:var(--teal)}.stepdots i.cur{background:#f59e0b}
+/* strategies widget */
+.strat{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:820px){.strat{grid-template-columns:1fr}}
+.route{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center}
+.users{font-size:28px;text-align:center}
+.vers{display:flex;flex-direction:column;gap:8px}
+.ver{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--paper)}
+.ver .hd{display:flex;justify-content:space-between;font:600 13px var(--sans)}
+.ver .pct{font:600 13px var(--mono)}
+.ver .bar{height:10px}
+.ver.off{opacity:.45}
+/* dashboard */
+.dash{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:820px){.dash{grid-template-columns:1fr 1fr}}
+.tile{border:1.5px solid var(--line);border-radius:10px;background:var(--paper);padding:8px 10px;min-width:0}
+.tile .l{font:600 10.5px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.tile .v{font:700 20px var(--sans);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.bad{border-color:#fca5a5;background:#fef2f2}.tile.bad .v{color:var(--err)}
+.tile.warn{border-color:#fcd34d;background:#fffbeb}.tile.warn .v{color:var(--warn)}
+.tile.good .v{color:var(--ok)}
+.tile.wide{grid-column:span 2}
+@media (max-width:820px){.tile.wide{grid-column:span 2}}
+/* recipes */
+.recipes{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.recipes{grid-template-columns:1fr}}
+.recipe .tags{display:flex;flex-wrap:wrap;gap:5px;margin:4px 0 8px}
+.recipe .tags span{font:500 11px var(--mono);background:#f0fdfa;border:1px solid #a7ece0;color:#115e59;border-radius:5px;padding:1px 6px}
+.recipe pre{font:12.5px/1.55 var(--mono);background:var(--term);color:var(--term-ink);border-radius:9px;padding:10px 12px;overflow-x:auto;margin:8px 0;white-space:pre}
+.recipe .row2{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.recipe .gotcha{font-size:13.5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 10px;margin-top:8px}
+.recipe ol{padding-left:20px;margin:6px 0;font-size:14.5px}
+/* checklist */
+.chk{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:820px){.chk{grid-template-columns:1fr}}
+.chk h3{font-size:16px}
+.chk label{display:flex;gap:9px;align-items:flex-start;font-size:14.5px;padding:5px 0;cursor:pointer}
+.chk input{margin-top:4px;accent-color:var(--teal)}
+.lvl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+.lvl div{border:1.5px solid var(--line);border-radius:10px;padding:10px;background:var(--paper);font-size:13.5px}
+.lvl div b{display:block;font-size:15px}
+.lvl div.on{border-color:var(--teal);background:#f0fdfa;box-shadow:0 0 0 3px rgba(13,148,136,.12)}
+@media (max-width:640px){.lvl{grid-template-columns:1fr}}
+/* charts */
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.sliders{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:700px){.sliders{grid-template-columns:1fr}}
+.sliders label{font-size:13.5px;display:block}
+.sliders input{width:100%;accent-color:var(--docker)}
+.verdict{font-weight:600;padding:10px 14px;border-radius:10px;margin-top:10px;font-size:15px}
+.verdict.ok{background:#f0fbf4;color:var(--ok);border:1px solid #a7e3bf}
+.verdict.warn{background:#fffbeb;color:var(--warn);border:1px solid #fcd34d}
+.verdict.bad{background:#fef2f2;color:var(--err);border:1px solid #fca5a5}
+.logline{font:12.5px/1.6 var(--mono);background:var(--term);color:var(--term-ink);border-radius:10px;padding:12px 14px;white-space:pre-wrap;word-break:break-all;min-height:60px}
+.warnlist{margin:10px 0 0;padding-left:0;list-style:none;font-size:14px}
+.warnlist li{padding:4px 0}
+.ckgrid{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0}
+.ckgrid label{font:500 13px var(--mono);display:flex;gap:6px;align-items:center;cursor:pointer}
+.relgrid{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:8px}
+.relgrid i{height:26px;border-radius:5px;background:#e5e3dc;display:flex;align-items:center;justify-content:center;font:600 11px var(--mono);color:#fff;font-style:normal}
+.relgrid i.ok{background:#16a34a}.relgrid i.bad{background:#dc2626}.relgrid i.caught{background:#d97706}
+
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="topbar">
+    <div class="brand"><span class="tag">Playground</span>MLOps · CI/CD, Pipelines &amp; Deployment</div>
+    <div class="pct"><span id="pct">0%</span> · Contents</div>
+  </div>
+  <nav class="toc" id="toc">
+    <a href="#s1"><b>01</b>The problem</a>
+    <a href="#s2"><b>02</b>CI · CD · CD · CT</a>
+    <a href="#s3"><b>03</b>ML pipeline anatomy</a>
+    <a href="#s4"><b>04</b>CI lab</a>
+    <a href="#s5"><b>05</b>Deployment strategies</a>
+    <a href="#s6"><b>06</b>Deployment lab</a>
+    <a href="#s7"><b>07</b>Serving &amp; release checklist</a>
+    <a href="#s8"><b>08</b>Command reference</a>
+    <a href="#s9"><b>09</b>Which command?</a>
+    <a href="#s10"><b>10</b>Activities</a>
+    <a href="#s11"><b>11</b>Takeaways</a>
+  </nav>
+  <div class="progress" id="bar"></div>
+</header>
+
+<main>
+<div class="hero">
+  <div class="eyebrow">Session · Introduction to CI/CD · Building MLOps Pipelines · Model Deployment</div>
+  <h1>From commit to canary</h1>
+  <p>Automate the path from a code or data change to a model serving real traffic. Run CI on a pull request, rebuild a reproducible DVC pipeline, register models in MLflow, then release them with canary and blue-green rollouts. Every terminal here is simulated in your browser.</p>
+  <div class="pills"><span class="pill">2 live terminals</span><span class="pill">6 guided scenarios</span><span class="pill">git · GitHub Actions · DVC · MLflow · Argo Rollouts</span><span class="pill">nothing to install</span></div>
+</div>
+
+<!-- 01 -->
+<section id="s1">
+  <div class="eyebrow">01 · Why this exists</div>
+  <h2>The problem: release day, the manual way</h2>
+  <p class="lede">A typical first ML deployment is a checklist in someone's head: pull the notebook, retrain, eyeball the accuracy, copy a pickle to a server, restart the service. Each step is a chance to ship the wrong thing, and nothing stops a bad model before users see it.</p>
+  <div class="card" style="margin-top:20px">
+    <div class="labtag">Lab · ten releases, two ways</div>
+    <div class="grid2">
+      <div>
+        <h3>🧑‍💻 Manual</h3>
+        <ol class="small" style="padding-left:20px;margin:0">
+          <li>Pull latest notebook from someone's laptop</li>
+          <li>Re-run training cells (in the right order?)</li>
+          <li>Check accuracy by eye</li>
+          <li><code>scp model.pkl</code> to the server</li>
+          <li>Update <code>requirements.txt</code> by memory</li>
+          <li>Restart the service and hope</li>
+        </ol>
+      </div>
+      <div>
+        <h3>🤖 Pipeline</h3>
+        <ol class="small" style="padding-left:20px;margin:0">
+          <li>Every change goes through a pull request</li>
+          <li>CI runs lint, unit tests and data validation</li>
+          <li>Training is a versioned, reproducible stage</li>
+          <li>A quality gate compares against the current model</li>
+          <li>The image is built once and promoted unchanged</li>
+          <li>A canary release limits who sees a bad model</li>
+        </ol>
+      </div>
+    </div>
+    <div class="btnrow" style="margin:14px 0 6px">
+      <button class="btn ghost" id="relManual">Simulate 10 manual releases</button>
+      <button class="btn blue" id="relPipe">Simulate 10 pipeline releases</button>
+    </div>
+    <div class="relgrid" id="relGrid"></div>
+    <div class="legend"><span><i style="background:#16a34a;height:10px;width:10px"></i>shipped fine</span><span><i style="background:#d97706;height:10px;width:10px"></i>problem caught before users</span><span><i style="background:#dc2626;height:10px;width:10px"></i>incident in production</span></div>
+    <div class="miniterm" id="relOut" style="margin-top:10px;min-height:90px"><span class="d">Pick a way to release…</span></div>
+  </div>
+  <div class="callout">CI/CD doesn't make people more careful. It turns the careful steps into code that runs on <b>every</b> change, in the same order, with gates that refuse to continue when something is wrong.</div>
+</section>
+
+<!-- 02 -->
+<section id="s2">
+  <div class="eyebrow">02 · Vocabulary</div>
+  <h2>CI, CD, CD and CT</h2>
+  <p class="lede">Four practices, often blurred together. Tap one to see which part of the path it automates.</p>
+  <div class="chiprow" id="ciChips">
+    <button class="cchip" data-k="ci">Continuous Integration</button>
+    <button class="cchip" data-k="cdl">Continuous Delivery</button>
+    <button class="cchip" data-k="cdp">Continuous Deployment</button>
+    <button class="cchip" data-k="ct">Continuous Training</button>
+  </div>
+  <div class="pipe" id="ciPipe">
+    <div class="stg" data-i="0"><div class="n">trigger</div><div class="nm">Commit / PR</div></div>
+    <div class="stg" data-i="1"><div class="n">build</div><div class="nm">Lint &amp; unit tests</div></div>
+    <div class="stg" data-i="2"><div class="n">ml</div><div class="nm">Data validation</div></div>
+    <div class="stg" data-i="3"><div class="n">ml</div><div class="nm">Train &amp; evaluate</div></div>
+    <div class="stg" data-i="4"><div class="n">package</div><div class="nm">Build image, register model</div></div>
+    <div class="stg" data-i="5"><div class="n">release</div><div class="nm">Deploy to staging</div></div>
+    <div class="stg gate" data-i="6"><div class="n">human</div><div class="nm">Approve</div></div>
+    <div class="stg" data-i="7"><div class="n">release</div><div class="nm">Deploy to prod</div></div>
+    <div class="stg" data-i="8"><div class="n">operate</div><div class="nm">Monitor → retrain</div></div>
+  </div>
+  <div class="card explain" id="ciExp"><span class="muted">Pick a practice above.</span></div>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th></th><th>Traditional software</th><th>Machine learning</th></tr>
+    <tr><td><b>What changes</b></td><td>Code</td><td>Code <i>and</i> data <i>and</i> model</td></tr>
+    <tr><td><b>What triggers a pipeline</b></td><td>A commit</td><td>A commit, new data, a schedule, or a drift / performance alert</td></tr>
+    <tr><td><b>What "tests" means</b></td><td>Unit, integration, e2e</td><td>Those, plus data schema checks, training sanity checks and model quality gates</td></tr>
+    <tr><td><b>What is versioned</b></td><td>Source in git</td><td>Source in git, data and models in DVC / a model registry, experiments in MLflow</td></tr>
+    <tr><td><b>What can silently break</b></td><td>Rarely: it crashes</td><td>Often: a model keeps answering, just worse</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- 03 -->
+<section id="s3">
+  <div class="eyebrow g">03 · Building MLOps pipelines</div>
+  <h2>Anatomy of an ML pipeline</h2>
+  <p class="lede">Each stage either produces an artifact or acts as a <b>gate</b> that refuses to let a bad change through. Break something, then run the pipeline and see where it stops. The earlier a problem is caught, the cheaper it is.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="labtag">Lab · run the pipeline</div>
+    <div class="faults" id="faults">
+      <label><input type="checkbox" data-f="test"> Break a unit test</label>
+      <label><input type="checkbox" data-f="schema"> Upstream renames a column</label>
+      <label><input type="checkbox" data-f="model"> New model is worse (acc 0.86)</label>
+      <label><input type="checkbox" data-f="cve"> Image has a critical CVE</label>
+      <label><input type="checkbox" data-f="smoke"> Staging smoke test fails</label>
+    </div>
+    <div class="btnrow" style="align-items:center;margin:8px 0">
+      <div class="toggle" id="modeTog"><button data-m="delivery" class="on">Continuous delivery</button><button data-m="deployment">Continuous deployment</button></div>
+      <button class="btn blue" id="pRun">▶ Run pipeline</button>
+    </div>
+    <div class="pipe" id="mlPipe"></div>
+    <div class="plog" id="pLog"><span class="d">Pipeline log appears here.</span></div>
+  </div>
+  <div class="grid3" style="margin-top:16px">
+    <div class="card"><h3>Make stages idempotent</h3><p class="small">Re-running a stage with the same inputs must give the same outputs. Pin seeds and package versions, and read data by version, not "latest". Tools like DVC skip stages whose inputs haven't changed.</p></div>
+    <div class="card"><h3>Build once, promote many</h3><p class="small">Build the container image a single time and move <i>that exact image</i> from staging to production by its digest. Never rebuild for prod, or you are testing one thing and shipping another.</p></div>
+    <div class="card"><h3>Gate on a comparison</h3><p class="small">"Accuracy ≥ 0.90" alone isn't enough. Also require the challenger to beat (or match) the current champion on the same evaluation data, and check latency and model size.</p></div>
+  </div>
+</section>
+
+<!-- 04 -->
+<section id="s4">
+  <div class="eyebrow">04 · Hands-on</div>
+  <h2>Lab: CI for an ML repo</h2>
+  <p class="lede">A simulated repo <code>iris-mlops</code> with git, the GitHub CLI (<code>gh</code>), pytest, DVC and MLflow. Follow a scenario or type <code>help</code>. The panel underneath shows the repo, the DVC pipeline and the model registry as you go.</p>
+  <div id="ciLab"></div>
+</section>
+
+<!-- 05 -->
+<section id="s5">
+  <div class="eyebrow k">05 · Model deployment</div>
+  <h2>Deployment strategies</h2>
+  <p class="lede">How do you swap the model behind a live endpoint? Each strategy trades speed, cost and risk differently. Pick one and step through it.</p>
+  <div class="card" style="margin-top:18px">
+    <div class="chiprow" id="stratChips"></div>
+    <div class="strat">
+      <div>
+        <div class="route"><div class="users">👥<div class="small muted">users</div></div><div class="vers" id="stratVers"></div></div>
+        <div class="btnrow" style="margin-top:12px"><button class="btn kb" id="stratNext">Next phase ▶</button><button class="btn ghost" id="stratReset">Reset</button><span class="step-prog" id="stratProg" style="align-self:center"></span></div>
+      </div>
+      <div class="card" style="background:var(--paper2)" id="stratInfo"></div>
+    </div>
+  </div>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th>Strategy</th><th>Downtime</th><th>Rollback</th><th>Extra infra</th><th>Users exposed to a bad model</th><th>Good for ML when…</th></tr>
+    <tr><td><b>Recreate</b></td><td>Yes</td><td>Slow (redeploy)</td><td>None</td><td>All</td><td>Internal batch tools; downtime is acceptable</td></tr>
+    <tr><td><b>Rolling</b></td><td>No</td><td>Medium</td><td>+1 pod</td><td>Growing share</td><td>Low-risk updates (e.g. dependency bumps)</td></tr>
+    <tr><td><b>Blue-green</b></td><td>No</td><td>Instant (switch back)</td><td>2× during release</td><td>All, after the switch</td><td>You can fully test the new stack before go-live</td></tr>
+    <tr><td><b>Canary</b></td><td>No</td><td>Fast, automatic with analysis</td><td>Small</td><td>A small %, briefly</td><td>New model versions; most common default</td></tr>
+    <tr><td><b>Shadow</b></td><td>No</td><td>Nothing to roll back</td><td>2× compute</td><td>None (responses discarded)</td><td>Risky new models; compare predictions offline first</td></tr>
+    <tr><td><b>A/B test</b></td><td>No</td><td>Fast</td><td>Small</td><td>A chosen segment</td><td>Measuring business impact (conversion, revenue)</td></tr>
+  </table>
+  </div>
+</section>
+
+<!-- 06 -->
+<section id="s6">
+  <div class="eyebrow k">06 · Hands-on</div>
+  <h2>Lab: progressive delivery with Argo Rollouts</h2>
+  <p class="lede">A simulated Kubernetes cluster running the <b>Argo Rollouts</b> controller. A <code>Rollout</code> is a drop-in replacement for a Deployment that adds canary steps, automated metric analysis and blue-green switching. Times are compressed from minutes to seconds.</p>
+  <div id="cdLab"></div>
+</section>
+
+<!-- 07 -->
+<section id="s7">
+  <div class="eyebrow">07 · Serving</div>
+  <h2>Serving patterns &amp; a release checklist</h2>
+  <div class="scrollx" style="margin-top:18px">
+  <table class="tbl">
+    <tr><th>Pattern</th><th>How it works</th><th>Latency</th><th>Example</th><th>Typical tooling</th></tr>
+    <tr><td><b>Batch</b></td><td>Score a whole dataset on a schedule; write results to a table</td><td>Minutes–hours</td><td>Nightly churn scores</td><td>Airflow, Spark, Kubernetes CronJob</td></tr>
+    <tr><td><b>Online (REST / gRPC)</b></td><td>Model behind an API; one request, one prediction</td><td>Milliseconds</td><td>Fraud check at checkout</td><td>FastAPI, KServe, BentoML, Seldon, SageMaker endpoints</td></tr>
+    <tr><td><b>Streaming</b></td><td>Consume events from a queue and emit predictions</td><td>Seconds</td><td>Real-time anomaly detection</td><td>Kafka + Flink / Spark Streaming</td></tr>
+    <tr><td><b>Edge / embedded</b></td><td>Model ships inside the app or device</td><td>Local</td><td>On-device keyboard suggestions</td><td>ONNX Runtime, TensorFlow Lite, Core ML</td></tr>
+  </table>
+  </div>
+  <div class="grid2" style="margin-top:18px">
+    <div class="card"><h3>Before a model goes to production</h3>
+      <ol class="small" style="padding-left:20px;margin:6px 0 0">
+        <li>Code, data version and params are committed (git + DVC)</li>
+        <li>Experiment and metrics are tracked; model is in the registry with a version</li>
+        <li>Challenger beats champion on the same holdout set</li>
+        <li>Latency, memory and image size are within budget</li>
+        <li>Input schema is validated at the API boundary</li>
+        <li>The image is scanned and referenced by digest</li>
+        <li>Smoke tests pass in staging with production-like config</li>
+        <li>Monitoring, dashboards and alerts exist for the new version</li>
+        <li>The rollback path is tested, not assumed</li>
+      </ol>
+    </div>
+    <div class="card"><h3>What lives where</h3>
+      <div class="kv"><span>Source code, pipeline definitions</span><span>git</span></div>
+      <div class="kv"><span>Datasets, large artifacts</span><span>DVC → S3 / GCS</span></div>
+      <div class="kv"><span>Runs, params, metrics</span><span>MLflow tracking</span></div>
+      <div class="kv"><span>Approved model versions</span><span>Model registry</span></div>
+      <div class="kv"><span>Runtime environment</span><span>Container image</span></div>
+      <div class="kv"><span>Desired cluster state</span><span>Kubernetes YAML in git (GitOps)</span></div>
+      <div class="kv"><span>Automation</span><span>GitHub Actions / GitLab CI / Jenkins</span></div>
+      <p class="small muted" style="margin:10px 0 0">GitOps tools such as Argo CD or Flux watch the git repo and apply its YAML to the cluster, so a merged pull request <i>is</i> the deployment.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 08 -->
+<section id="s8">
+  <div class="eyebrow">08 · Cheat sheet</div>
+  <h2>Command reference</h2>
+  <p class="lede">Search by name or purpose, for example “metrics”, “rollback” or “register”.</p>
+  <div class="refbar"><input id="refQ" type="search" placeholder="Search commands or purpose…" aria-label="Search commands"><div class="btnrow" id="refCats"></div></div>
+  <div class="scrollx"><table class="tbl ref" id="refTbl"></table></div>
+</section>
+
+<!-- 09 -->
+<section id="s9">
+  <div class="eyebrow">09 · Check yourself</div>
+  <h2>Which command?</h2>
+  <div class="card quiz" id="quiz" style="margin-top:18px"></div>
+</section>
+
+<!-- 10 -->
+<section id="s10">
+  <div class="eyebrow">10 · Practice</div>
+  <h2>Activities</h2>
+  <p class="lede">Do these in the labs above, then try the same on a real GitHub repo. Tick each off as you go.</p>
+  <div class="acts" id="acts" style="margin-top:18px"></div>
+</section>
+
+<!-- 11 -->
+<section id="s11">
+  <div class="eyebrow">11 · Wrap-up</div>
+  <h2>Key takeaways</h2>
+  <ol class="takeaways">
+    <li><b>CI checks every change; CD ships it.</b> Continuous delivery stops at a human approval; continuous deployment doesn't.</li>
+    <li><b>ML adds data and models to the pipeline.</b> Version all three, and let new data, schedules or alerts trigger it, not only commits.</li>
+    <li><b>Pipelines are stages plus gates.</b> Tests, data validation and model quality gates stop bad changes as early (and cheaply) as possible.</li>
+    <li><b>Reproducibility is a feature.</b> DVC re-runs only what changed and can rebuild any past model from a commit.</li>
+    <li><b>Track every run; promote from a registry.</b> MLflow records params and metrics; aliases like <code>champion</code> decide what serves.</li>
+    <li><b>Build the image once, promote it by digest.</b> What you tested is exactly what you ship.</li>
+    <li><b>Release progressively.</b> Canary plus automated analysis means a bad model reaches a few users for a short time and rolls itself back.</li>
+    <li><b>Practise rollback.</b> Blue-green gives an instant switch back; make sure you've used it before you need it.</li>
+  </ol>
+  <h3 style="margin-top:34px">Glossary</h3>
+  <dl class="gloss">
+    <dt>Pipeline</dt><dd>An automated, ordered set of stages (build, test, train, deploy) triggered by an event.</dd>
+    <dt>Workflow / job / step</dt><dd>GitHub Actions terms: a workflow YAML has jobs; jobs run steps on a runner.</dd>
+    <dt>Quality gate</dt><dd>A check that must pass for the pipeline to continue (e.g. accuracy ≥ champion).</dd>
+    <dt>DVC</dt><dd>Data Version Control: versions data and models alongside git and runs pipelines defined in <code>dvc.yaml</code>.</dd>
+    <dt>dvc.lock</dt><dd>Records the exact hashes of every stage's inputs and outputs, so a pipeline run can be reproduced.</dd>
+    <dt>Experiment tracking</dt><dd>Recording each training run's code version, params, metrics and artifacts (e.g. MLflow).</dd>
+    <dt>Model registry</dt><dd>A catalogue of model versions with metadata and aliases such as <code>champion</code> / <code>challenger</code>.</dd>
+    <dt>Champion / challenger</dt><dd>The model currently serving vs a candidate that must beat it to replace it.</dd>
+    <dt>Canary</dt><dd>Sending a small share of traffic to the new version first and widening it if metrics stay healthy.</dd>
+    <dt>Blue-green</dt><dd>Running the new version (green) alongside the old (blue) and switching all traffic at once.</dd>
+    <dt>Shadow deployment</dt><dd>Mirroring live traffic to a new model whose responses are logged but never returned.</dd>
+    <dt>AnalysisRun</dt><dd>Argo Rollouts object that queries metrics (e.g. Prometheus) during a rollout and fails it if thresholds are breached.</dd>
+    <dt>GitOps</dt><dd>The cluster's desired state lives in git; a controller (Argo CD, Flux) syncs it.</dd>
+    <dt>Image digest</dt><dd>An immutable content hash (<code>sha256:…</code>) identifying one exact image, unlike a movable tag.</dd>
+  </dl>
+</section>
+</main>
+
+<footer>The labs on this page simulate git, GitHub Actions, DVC, MLflow and Argo Rollouts in your browser for teaching. Output is simplified, nothing is installed, and nothing is sent anywhere.</footer>
+
+<script>
+/* ============ utilities ============ */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const rnd=(chars,n)=>Array.from({length:n},()=>chars[Math.random()*chars.length|0]).join('');
+const hex=n=>rnd('0123456789abcdef',n);
+const kid=n=>rnd('bcdfghjklmnpqrstvwxz2456789',n);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function table(rows,gap=3){const w=[];rows.forEach(r=>r.forEach((c,i)=>w[i]=Math.max(w[i]||0,String(c).length)));return rows.map(r=>r.map((c,i)=>i===r.length-1?String(c):String(c).padEnd(w[i]+gap)).join('')).join('\n')}
+function tokenize(s){const out=[];const re=/"([^"]*)"|'([^']*)'|(\S+)/g;let m;while((m=re.exec(s)))out.push(m[1]!==undefined?m[1]:m[2]!==undefined?m[2]:m[3]);return out}
+function ago(t){const s=Math.max(1,Math.round((Date.now()-t)/1000));if(s<60)return s+' seconds';const m=Math.round(s/60);return m===1?'About a minute':m+' minutes'}
+function kage(t){const s=Math.max(0,Math.round((Date.now()-t)/1000));if(s<120)return s+'s';return Math.round(s/60)+'m'}
+function nginxTime(){const d=new Date();const p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`}
+function clfTime(){const d=new Date();const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];const p=n=>String(n).padStart(2,'0');return `${p(d.getDate())}/${mo}/${d.getFullYear()}:${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} +0000`}
+const norm=r=>{if(!r)return r;const last=r.split('/').pop();return last.includes(':')?r:r+':latest'};
+const splitRef=r=>{const i=r.lastIndexOf(':');return [r.slice(0,i),r.slice(i+1)]};
+const short=r=>r.endsWith(':latest')?r.slice(0,-7):r;
+function KIND(img){const b=img.split(':')[0].split('/').pop();if(b==='hello-world')return'hello';if(b==='nginx'||b==='httpd')return'web';if(b==='redis')return'redis';if(b.includes('iris-api')||b==='app-api')return'api';if(b==='postgres')return'db';return'shell'}
+function parseArgs(arr,valueFlags){const pos=[],f={};let rest=null;for(let i=0;i<arr.length;i++){const x=arr[i];if(x==='--'){rest=arr.slice(i+1);break}
+  if(x.startsWith('--')){const eq=x.indexOf('=');if(eq>0)f[x.slice(2,eq)]=x.slice(eq+1);else{const k=x.slice(2);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}}
+  else if(x.startsWith('-')&&x.length>1){const k=x.slice(1);if(valueFlags.includes(k)&&i+1<arr.length)f[k]=arr[++i];else f[k]=true}
+  else pos.push(x)}return{pos,f,rest}}
+
+/* ============ Terminal ============ */
+class Terminal{
+  constructor(root,{prompt,name,onCommand,after}){
+    root.innerHTML=`<div class="t-bar"><i></i><i></i><i></i><span class="t-name">${esc(name)}</span></div><div class="t-body"><div class="t-out"></div><div class="t-line"><span class="t-prompt"></span><input class="t-in" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Terminal input" enterkeyhint="send"></div></div>`;
+    this.root=root;this.body=$('.t-body',root);this.out=$('.t-out',root);this.inp=$('.t-in',root);this.pr=$('.t-prompt',root);
+    this.onCommand=onCommand;this.after=after;this.hist=[];this.hi=0;this.mode=null;this.setPrompt(prompt);
+    this.inp.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){e.preventDefault();const v=this.inp.value;this.inp.value='';this.run(v)}
+      else if(e.key==='ArrowUp'){if(this.hi>0){this.hi--;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='ArrowDown'){if(this.hi<this.hist.length){this.hi++;this.inp.value=this.hist[this.hi]||''}e.preventDefault()}
+      else if(e.key==='l'&&e.ctrlKey){e.preventDefault();this.clear()}
+    });
+    this.body.addEventListener('click',()=>{if(!String(window.getSelection&&window.getSelection()))this.inp.focus({preventScroll:true})});
+  }
+  setPrompt(p){this.prompt=p;this.pr.textContent=p}
+  print(text,cls=''){String(text).split('\n').forEach(line=>{const d=document.createElement('div');d.className='ln '+cls;d.textContent=line===''?' ':line;this.out.appendChild(d)});this.scroll()}
+  scroll(){this.body.scrollTop=this.body.scrollHeight}
+  clear(){this.out.innerHTML=''}
+  run(raw){const cmd=String(raw).trim();const d=document.createElement('div');d.className='ln cmd';const p=document.createElement('span');p.className='p';p.textContent=this.prompt;d.append(p,document.createTextNode(cmd));this.out.appendChild(d);
+    if(!cmd){this.scroll();return}this.hist.push(cmd);this.hi=this.hist.length;let ok;
+    try{ok=this.mode?this.mode(cmd,this):this.onCommand(cmd,this)}catch(e){this.print('playground error: '+e.message,'err');console.error(e);ok=false}
+    this.scroll();if(this.after)this.after(cmd,ok)}
+}
+
+/* ============ Lab controller ============ */
+function makeLab(mount,cfg){
+  mount.innerHTML=`<div class="lab ${cfg.cls||''}">
+   <div class="lab-head"><div><div class="lab-title">${cfg.title}</div><div class="scen-desc"></div></div><div class="lab-actions"><span class="step-prog"></span><button class="btn ghost reset">↺ Start again</button></div></div>
+   <div class="scen-tabs"></div>
+   <div class="lab-grid">
+     <aside class="guide"><details open class="steps"><summary>Steps · click a command to run it</summary><ol></ol></details>
+       <details open class="try"><summary>Try these on purpose</summary><ul></ul></details></aside>
+     <div class="work"><div class="term"></div>
+       <div class="suggest"><span>Suggested next commands · click one or type your own</span><div class="chips"></div></div>
+       <div class="extra"></div><div class="viz"></div></div>
+   </div></div>`;
+  const root=mount.firstElementChild,sim=cfg.sim;
+  const tabs=$('.scen-tabs',root),stepsEl=$('.steps ol',root),tryEl=$('.try ul',root),chips=$('.chips',root),viz=$('.viz',root),prog=$('.step-prog',root),desc=$('.scen-desc',root);
+  let cur=0,done=new Set(),celebrated=false;
+  const term=new Terminal($('.term',root),{prompt:cfg.prompt,name:cfg.termName,onCommand:(c,t)=>sim.handle(c,t),after:(c,ok)=>check(c,ok)});
+  sim.onChange=()=>{sim.render(viz);renderSteps()};
+  if(cfg.extra)cfg.extra($('.extra',root),term);
+  cfg.scenarios.forEach((s,i)=>{const b=document.createElement('button');b.className='tab';b.innerHTML=`<span>Scenario ${'ABCDEF'[i]}</span>${esc(s.title)}`;b.onclick=()=>load(i);tabs.appendChild(b)});
+  $('.reset',root).onclick=()=>load(cur);
+  const stepCmd=st=>typeof st.cmd==='function'?st.cmd(sim):st.cmd;
+  function load(i){cur=i;done=new Set();celebrated=false;term.mode=null;term.setPrompt(cfg.prompt);term.clear();const s=cfg.scenarios[i];
+    sim.reset(s);[...tabs.children].forEach((b,j)=>b.classList.toggle('on',j===i));desc.textContent=s.desc;term.print(s.intro,'dim');
+    tryEl.innerHTML='';s.tryThese.forEach(tt=>{const li=document.createElement('li');const b=document.createElement('button');b.className='cmdchip';b.textContent=tt.cmd;b.onclick=()=>term.run(tt.cmd);const n=document.createElement('div');n.className='note';n.innerHTML=tt.why;li.append(b,n);tryEl.appendChild(li)});
+    renderSteps();sim.render(viz)}
+  function renderSteps(){const s=cfg.scenarios[cur];const next=s.steps.findIndex((_,i)=>!done.has(i));stepsEl.innerHTML='';
+    s.steps.forEach((st,i)=>{const li=document.createElement('li');li.className=(done.has(i)?'done':'')+(i===next?' next':'');const b=document.createElement('button');b.className='cmdchip';const txt=stepCmd(st);b.textContent=txt;b.onclick=()=>term.run(stepCmd(st));const n=document.createElement('div');n.className='note';n.innerHTML=st.note;li.append(b,n);stepsEl.appendChild(li)});
+    prog.textContent=`${done.size} / ${s.steps.length} steps`;
+    chips.innerHTML='';const sug=[];s.steps.forEach((st,i)=>{if(!done.has(i)&&sug.length<2)sug.push(stepCmd(st))});
+    if(term.mode&&!sug.includes('exit'))sug.push('exit');sug.push('help','clear');
+    sug.forEach(c=>{const b=document.createElement('button');b.textContent=c;b.onclick=()=>term.run(c);chips.appendChild(b)})}
+  function check(c,ok){if(ok===false){renderSteps();return}const s=cfg.scenarios[cur];const n=c.trim().replace(/\s+/g,' ');
+    const i=s.steps.findIndex((st,j)=>!done.has(j)&&st.match.test(n));if(i>=0)done.add(i);renderSteps();
+    if(done.size===s.steps.length&&!celebrated){celebrated=true;term.print('✔ Scenario complete! Try the "Try these on purpose" commands, or pick the next scenario.','ok')}}
+  load(0);return{term,load};
+}
+
+
+
+/* ============ shared helpers for the MLOps playgrounds ============ */
+/* split a command line on a separator ("&&" or "|") outside quotes */
+function splitTop(s,sep){const out=[];let cur='',q=null;for(let i=0;i<s.length;i++){const ch=s[i];
+  if(q){cur+=ch;if(ch===q)q=null;continue}
+  if(ch==='"'||ch==="'"){q=ch;cur+=ch;continue}
+  if(s.startsWith(sep,i)&&!(sep==='|'&&(s[i+1]==='|'||s[i-1]==='|'))){out.push(cur.trim());cur='';i+=sep.length-1;continue}
+  cur+=ch}out.push(cur.trim());return out.filter(x=>x!=='')}
+/* run "a && b && c": stop at the first failure */
+function runChain(raw,t,one){const parts=splitTop(raw,'&&');let ok=true;for(const p of parts){ok=one(p,t);if(ok===false)return false}return ok}
+/* deterministic random numbers */
+function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+/* print lines one after another (for streaming output); returns a cancel fn */
+function streamLines(t,items,isAlive,done){let i=0,stop=false;const next=()=>{if(stop||!isAlive())return;if(i>=items.length){if(done)done();return}const it=items[i++];t.print(it.text,it.cls||'');setTimeout(next,it.delay==null?350:it.delay)};next();return()=>{stop=true}}
+/* small editable file helpers: sed -i 's/a/b/[g]' file */
+function applySed(expr,content){const m=/^s(.)(.*?)\1(.*?)\1(g?)$/.exec(expr);if(!m)return null;const from=m[2],to=m[3];
+  if(m[4])return content.split(from).join(to);const i=content.indexOf(from);return i<0?content:content.slice(0,i)+to+content.slice(i+from.length)}
+
+function renderReference(R,cats){const tbl=$('#refTbl'),q=$('#refQ'),cb=$('#refCats');let cat='all';
+  ['all'].concat(cats).forEach(c=>{const b=document.createElement('button');b.className='fchip'+(c==='all'?' on':'');b.textContent=c;b.onclick=()=>{cat=c;$$('.fchip',cb).forEach(x=>x.classList.toggle('on',x===b));draw()};cb.appendChild(b)});
+  function draw(){const s=q.value.toLowerCase().trim();const rows=R.filter(r=>(cat==='all'||r[0]===cat)&&(!s||(r[1]+' '+r[2]).toLowerCase().includes(s)));
+    tbl.innerHTML='<tr><th>Command</th><th>Purpose</th><th class="cathead">Tool</th></tr>'+(rows.length?rows.map(r=>`<tr><td><code>${esc(r[1])}</code></td><td>${esc(r[2])}</td><td class="catcell"><span class="cat">${esc(r[0])}</span></td></tr>`).join(''):'<tr><td colspan="3" class="muted">No matches.</td></tr>')}
+  q.oninput=draw;draw()}
+
+function renderQuiz(Q){let i=0,score=0;const ans={};const el=$('#quiz');
+  function draw(){const q=Q[i];el.innerHTML=`<div class="qhead"><span>Question ${i+1} of ${Q.length}</span><span>Score: ${score}/${Object.keys(ans).length}</span></div><div class="qtext">${q[0]}</div><div class="opts">${q[1].map((o,j)=>`<button class="opt" data-j="${j}">${esc(o)}</button>`).join('')}</div><div class="qexp"></div><div class="qnav"><button class="btn ghost" id="qPrev" ${i===0?'disabled':''}>← Previous</button><button class="btn" id="qNext">${i===Q.length-1?'Restart':'Next →'}</button></div>`;
+    const show=j=>{$$('.opt',el).forEach((b,k)=>{b.disabled=true;if(k===q[2])b.classList.add('right');else if(k===j)b.classList.add('wrong')});$('.qexp',el).innerHTML=(j===q[2]?'<b style="color:var(--ok)">Correct.</b> ':'<b style="color:var(--err)">Not quite.</b> ')+q[3]};
+    if(i in ans)show(ans[i]);
+    $$('.opt',el).forEach(b=>b.onclick=()=>{const j=+b.dataset.j;ans[i]=j;if(j===q[2])score++;show(j);$('.qhead span:last-child',el).textContent=`Score: ${score}/${Object.keys(ans).length}`});
+    $('#qPrev').onclick=()=>{i--;draw()};$('#qNext').onclick=()=>{if(i===Q.length-1){i=0;score=0;for(const k in ans)delete ans[k]}else i++;draw()}}
+  draw()}
+
+function renderActivities(A){const el=$('#acts');A.forEach((a,i)=>{const d=document.createElement('div');d.className='card act';d.innerHTML=`<div class="num">ACTIVITY ${String(i+1).padStart(2,'0')} · ${a[1]}</div><h3>${a[0]}</h3><ol>${a[2].map(s=>`<li>${s}</li>`).join('')}</ol><label><input type="checkbox"> Done</label>`;$('input',d).onchange=e=>d.classList.toggle('done',e.target.checked);el.appendChild(d)})}
+
+function initToc(){const bar=$('#bar'),pct=$('#pct'),links=$$('#toc a');
+  function onScroll(){const h=document.documentElement;const p=Math.round(h.scrollTop/Math.max(1,h.scrollHeight-h.clientHeight)*100);bar.style.width=p+'%';pct.textContent=p+'%';
+    let cur=null;$$('main section').forEach(s=>{if(s.getBoundingClientRect().top<140)cur=s.id});links.forEach(a=>{const on=a.getAttribute('href')==='#'+cur;if(on&&!a.classList.contains('on')){a.classList.add('on');a.scrollIntoView({block:'nearest',inline:'center'})}else if(!on)a.classList.remove('on')})}
+  window.addEventListener('scroll',onScroll,{passive:true});onScroll()}
+
+function copyBtn(btn,text){btn.onclick=async()=>{try{await navigator.clipboard.writeText(text);btn.textContent='Copied ✓'}catch(e){btn.textContent='Select & copy manually'}setTimeout(()=>btn.textContent='Copy',1600)}}
+
+/* sparkline svg from numbers */
+function sparkSVG(vals,w,h,color,maxV){if(!vals.length)return '';const mx=maxV||Math.max(...vals)*1.15||1;const pts=vals.map((v,i)=>`${(i/(Math.max(1,vals.length-1))*w).toFixed(1)},${(h-v/mx*h).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline fill="none" stroke="${color}" stroke-width="2" points="${pts}"/></svg>`}
+
+
+/* =====================================================================
+   PAGE 1 · CI/CD, ML pipelines & model deployment
+   ===================================================================== */
+const hashStr=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(16)};
+const FILES1={
+'.github/workflows/ci.yml':`name: ci
+on:
+  pull_request:            # every PR gets checked
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Lint
+        run: ruff check .
+      - name: Unit tests
+        run: pytest -q
+      - name: Validate data schema
+        run: python scripts/validate_data.py data/sample.csv`,
+'.github/workflows/cd.yml':`name: cd
+on:
+  push:
+    branches: [main]       # runs after a PR is merged
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (once)
+        run: docker build -t ghcr.io/ketan/iris-api:\${{ github.sha }} .
+      - name: Scan image
+        run: trivy image --exit-code 1 --severity CRITICAL ghcr.io/ketan/iris-api:\${{ github.sha }}
+      - name: Push image
+        run: docker push ghcr.io/ketan/iris-api:\${{ github.sha }}
+      - name: Deploy to staging
+        run: kubectl argo rollouts set image iris-api iris-api=ghcr.io/ketan/iris-api:\${{ github.sha }} -n staging`,
+'src/features.py':`import pandas as pd
+
+BASE = ["sepal_length", "sepal_width", "petal_length", "petal_width"]
+FEATURES = list(BASE)
+
+
+def build_features(df: pd.DataFrame) -> pd.DataFrame:
+    out = df[BASE].copy()
+    if "petal_ratio" in FEATURES:
+        out["petal_ratio"] = df["petal_length"] / df["petal_width"]
+    return out[FEATURES]`,
+'tests/test_features.py':`from src.features import build_features
+
+N_FEATURES = 4
+
+
+def test_feature_columns(sample_df):
+    assert build_features(sample_df).shape[1] == N_FEATURES
+
+
+def test_no_nans(sample_df):
+    assert not build_features(sample_df).isna().any().any()`,
+'src/train.py':`import argparse
+import joblib
+import mlflow
+from sklearn.ensemble import RandomForestClassifier
+
+from src.data import load_split
+
+p = argparse.ArgumentParser()
+p.add_argument("--n-estimators", type=int, default=100)
+p.add_argument("--max-depth", type=int, default=5)
+args = p.parse_args()
+
+mlflow.set_experiment("iris")
+with mlflow.start_run():
+    X_tr, X_te, y_tr, y_te = load_split()
+    model = RandomForestClassifier(n_estimators=args.n_estimators,
+                                   max_depth=args.max_depth, random_state=42)
+    model.fit(X_tr, y_tr)
+    mlflow.log_params(vars(args))
+    mlflow.log_metric("accuracy", model.score(X_te, y_te))
+    mlflow.sklearn.log_model(model, "model")
+    joblib.dump(model, "model.pkl")`,
+'requirements.txt':`pandas==2.2.3
+scikit-learn==1.5.2
+mlflow==2.17.2
+dvc[s3]==3.56.0
+fastapi==0.115.0
+pytest==8.3.3
+ruff==0.7.3`,
+'dvc.yaml':`stages:
+  prepare:
+    cmd: python src/prepare.py data/raw.csv
+    deps: [src/prepare.py, data/raw.csv]
+    params: [prepare.split, prepare.seed]
+    outs: [data/prepared]
+  featurize:
+    cmd: python src/featurize.py data/prepared data/features
+    deps: [src/featurize.py, src/features.py, data/prepared]
+    outs: [data/features]
+  train:
+    cmd: python src/train.py data/features model.pkl
+    deps: [src/train.py, data/features]
+    params: [train.n_estimators, train.max_depth]
+    outs: [model.pkl]
+  evaluate:
+    cmd: python src/evaluate.py model.pkl data/features
+    deps: [src/evaluate.py, model.pkl, data/features]
+    metrics:
+      - metrics.json:
+          cache: false`,
+'params.yaml':`prepare:
+  split: 0.2
+  seed: 42
+train:
+  n_estimators: 100
+  max_depth: 5`,
+'scripts/quality_gate.py':`"""Fail the pipeline if the new model is not good enough."""
+import json, subprocess, sys, argparse
+
+p = argparse.ArgumentParser()
+p.add_argument("--min-accuracy", type=float, default=0.90)
+p.add_argument("--compare-to", default=None)   # a git ref, e.g. main
+a = p.parse_args()
+
+new = json.load(open("metrics.json"))
+ok = new["accuracy"] >= a.min_accuracy
+if a.compare_to:
+    old = json.loads(subprocess.check_output(
+        ["git", "show", f"{a.compare_to}:metrics.json"]))
+    ok &= new["accuracy"] >= old["accuracy"] - 0.005   # allow tiny noise
+sys.exit(0 if ok else 1)`,
+'README.md':'# iris-mlops\nTrain, test and ship the iris classifier.'
+};
+const LIST1=['.github/','data/','scripts/','src/','tests/','README.md','dvc.lock','dvc.yaml','params.yaml','requirements.txt'];
+
+function createCISim(){
+  let S,gen=0;const sim={onChange(){},reset,handle,render,bestRun};
+  const fail=(t,m)=>{t.print(m,'err');return false};const ch=()=>sim.onChange();
+  const STAGES=['prepare','featurize','train','evaluate'];
+  function reset(sc){gen++;S={files:JSON.parse(JSON.stringify(FILES1)),head:null,branch:'main',branches:{main:[{sha:hex(7),msg:'Add DVC pipeline and CI workflow'}]},pushed:{main:true},dirty:new Set(),staged:new Set(),
+      pr:null,runs:[],runN:11800000400,env:{},dvc:{rawVer:2,lock:{},lockIn:{},metrics:{accuracy:0.927,f1:0.923},headMetrics:{accuracy:0.927,f1:0.923},pushed:true,ran:false},
+      ml:{runs:[],models:{},serving:null,uriSet:false}};
+    S.head=JSON.parse(JSON.stringify(S.files));
+    const k=keys(1);STAGES.forEach(s=>{S.dvc.lock[s]=k[s]});S.dvc.lockIn=inputs(1);
+    if(sc.setup)sc.setup(S);ch()}
+  function params(src){const f=src||S.files['params.yaml'];const g=(re,d)=>{const m=re.exec(f);return m?+m[1]:d};return{split:g(/split:\s*([\d.]+)/,0.2),seed:g(/seed:\s*(\d+)/,42),n:g(/n_estimators:\s*(\d+)/,100),d:g(/max_depth:\s*(\d+)/,5)}}
+  function inputs(raw){const p=params();return{raw:raw||S.dvc.rawVer,split:p.split,seed:p.seed,feat:S.files['src/features.py'],n:p.n,d:p.d,train:S.files['src/train.py']}}
+  function keys(raw){const i=inputs(raw);const prep=hashStr('r'+i.raw+'|'+i.split+'|'+i.seed);const feat=hashStr(prep+i.feat);const tr=hashStr(feat+'|'+i.n+'|'+i.d+i.train);return{prepare:prep,featurize:feat,train:tr,evaluate:hashStr(tr+'ev')}}
+  function changed(){const k=keys();return STAGES.filter(s=>k[s]!==S.dvc.lock[s])}
+  function metricsFor(p,raw){let a=0.927+(raw===2?0.006:0)+0.014*Math.log(p.n/100)/Math.log(3)-(p.d<4?(4-p.d)*0.03:0);a=Math.max(0.8,Math.min(0.975,a));return{accuracy:+a.toFixed(3),f1:+(a-0.004).toFixed(3)}}
+  const featCount=src=>4+(/FEATURES\.append\(["']petal_ratio["']\)/.test(src)?1:0);
+  const nTests=src=>{const m=[...src.matchAll(/N_FEATURES\s*=\s*(\d+)/g)];return m.length?+m[m.length-1][1]:4};
+  const testsOk=f=>featCount(f['src/features.py'])===nTests(f['tests/test_features.py']);
+  const lintOk=f=>!/^import os\s*$/m.test(f['src/train.py']);
+  const testFailLog=f=>`F.........\n=================================== FAILURES ===================================\n____________________________ test_feature_columns _____________________________\n>       assert build_features(sample_df).shape[1] == N_FEATURES\nE       assert ${featCount(f['src/features.py'])} == ${nTests(f['tests/test_features.py'])}\n\ntests/test_features.py:7: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_features.py::test_feature_columns - assert ${featCount(f['src/features.py'])} == ${nTests(f['tests/test_features.py'])}\n1 failed, 11 passed in 0.84s`;
+  const lintFailLog=`src/train.py:${S?S.files['src/train.py'].split('\n').length:20}:8: F401 [*] \`os\` imported but unused\nFound 1 error.\n[*] 1 fixable with the \`--fix\` option.`;
+  const commits=()=>S.branches[S.branch];
+
+  /* ---------- GitHub Actions runs ---------- */
+  function startRun(wf,title,branch,event){const f=JSON.parse(JSON.stringify(S.head));const id=++S.runN;
+    let steps;if(wf==='ci'){steps=[['Set up job',350],['Run actions/checkout@v4',400],['Run actions/setup-python@v5',600],['Run pip install -r requirements.txt',1300],['Lint',500,lintOk(f)?null:lintFailLog],['Unit tests',1000,testsOk(f)?null:testFailLog(f)],['Validate data schema',600],['Complete job',200]]}
+    else if(wf==='cd'){steps=[['Set up job',300],['Run actions/checkout@v4',400],['Build image (once)',1400],['Scan image',800],['Push image',700],['Deploy to staging',700],['Complete job',200]]}
+    const r={id,wf,title,branch,event,status:'queued',conclusion:null,started:Date.now(),steps:steps.map(([name,ms,err])=>({name,ms,err,state:'pending'}))};
+    S.runs.unshift(r);const g=gen;let i=0;
+    const go=()=>{if(g!==gen)return;r.status='in_progress';if(i>=r.steps.length){r.status='completed';r.conclusion=r.conclusion||'success';r.ended=Date.now();ch();return}
+      const s=r.steps[i];if(r.conclusion==='failure'&&s.name!=='Complete job'){s.state='skip';i++;go();return}
+      s.state='running';ch();setTimeout(()=>{if(g!==gen)return;if(s.err){s.state='fail';r.conclusion='failure'}else s.state='ok';i++;ch();go()},s.ms)};
+    setTimeout(go,300);ch();return r}
+  function watch(t,r){const g=gen;let shown=0;const icon={ok:'✓',fail:'X',skip:'-'};
+    t.print(`Refreshing run status every 3 seconds. Press Ctrl+C to quit.\n\n${r.branch} ${r.wf.toUpperCase()} · ${r.id}\nTriggered via ${r.event} less than a minute ago\n\nJOBS`,'dim');
+    const iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return}
+      while(shown<r.steps.length&&['ok','fail','skip'].includes(r.steps[shown].state)){const s=r.steps[shown];t.print(`  ${icon[s.state]} ${s.name}`,s.state==='fail'?'err':s.state==='ok'?'ok':'dim');
+        if(s.state==='fail')t.print(s.err.split('\n').map(l=>'    '+l).join('\n')+'\n    Error: Process completed with exit code 1.','err');shown++}
+      if(r.status==='completed'&&shown>=r.steps.length){clearInterval(iv);t.print(r.conclusion==='success'?`\n✓ Run ${r.wf} (${r.id}) completed with 'success'`:`\nX Run ${r.wf} (${r.id}) completed with 'failure'`,r.conclusion==='success'?'ok':'err');
+        if(r.wf==='ci'&&r.conclusion==='failure')t.print('(CI caught it before review. Reproduce locally, fix, commit and push again.)','dim')}},250)}
+  const prRun=()=>S.pr?S.runs.find(r=>r.wf==='ci'&&r.branch===S.pr.branch):null;
+
+  /* ---------- git ---------- */
+  function git(a,t){const sub=a[0];const {pos,f}=parseArgs(a.slice(1),['m','am','b','c','u']);
+    switch(sub){
+      case 'status':{const out=[`On branch ${S.branch}`];const notSt=[...S.dirty].filter(x=>!S.staged.has(x));
+        if(S.staged.size)out.push('Changes to be committed:\n  (use "git restore --staged <file>..." to unstage)\n'+[...S.staged].map(x=>`\tmodified:   ${x}`).join('\n'));
+        if(notSt.length)out.push('Changes not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n'+notSt.map(x=>`\tmodified:   ${x}`).join('\n'));
+        if(!S.dirty.size)out.push('nothing to commit, working tree clean');t.print(out.join('\n\n'));return true}
+      case 'checkout':case 'switch':{const nb=f.b||f.c;if(nb){if(nb===true)return fail(t,`error: switch \`${sub==='switch'?'c':'b'}' requires a value`);if(S.branches[nb])return fail(t,`fatal: a branch named '${nb}' already exists`);S.branches[nb]=commits().slice();S.branch=nb;t.print(`Switched to a new branch '${nb}'`);ch();return true}
+        const b=pos[0];if(!b)return fail(t,'fatal: you must specify a branch');if(!S.branches[b])return fail(t,`error: pathspec '${b}' did not match any file(s) known to git`);S.branch=b;t.print(`Switched to branch '${b}'`);ch();return true}
+      case 'branch':t.print(Object.keys(S.branches).map(b=>(b===S.branch?'* ':'  ')+b).join('\n'));return true;
+      case 'add':{if(!pos.length)return fail(t,'Nothing specified, nothing added.\nhint: Maybe you wanted to say \'git add .\'?');
+        if(pos.includes('.')||f.A||f.all){S.dirty.forEach(x=>S.staged.add(x))}else{for(const p of pos){if(!(p in S.files))return fail(t,`fatal: pathspec '${p}' did not match any files`);if(S.dirty.has(p))S.staged.add(p)}}ch();return true}
+      case 'commit':{if(f.am||f.a){S.dirty.forEach(x=>S.staged.add(x))}const msg=f.m||f.am;
+        if(!S.staged.size){t.print(S.dirty.size?'no changes added to commit (use "git add" and/or "git commit -a")':`On branch ${S.branch}\nnothing to commit, working tree clean`,S.dirty.size?'err':'');return false}
+        if(!msg||msg===true)return fail(t,'Aborting commit due to empty commit message.\n(use: git commit -m "message")');
+        const sha=hex(7);commits().push({sha,msg});let ins=0,del=0;
+        S.staged.forEach(x=>{const a1=(S.head[x]||'').split('\n'),b1=S.files[x].split('\n');ins+=b1.filter(l=>!a1.includes(l)).length;del+=a1.filter(l=>!b1.includes(l)).length;S.head[x]=S.files[x];S.dirty.delete(x)});
+        if(S.staged.has('dvc.lock'))S.dvc.headMetrics={...S.dvc.metrics};
+        t.print(`[${S.branch} ${sha}] ${msg}\n ${S.staged.size} file${S.staged.size>1?'s':''} changed, ${ins} insertion${ins===1?'':'s'}(+)${del?`, ${del} deletion${del===1?'':'s'}(-)`:''}`);
+        S.staged.clear();if(S.pushed[S.branch]===true)S.pushed[S.branch]=false;ch();return true}
+      case 'push':{const b=S.branch;if(b==='main')return fail(t,`remote: error: GH006: Protected branch update failed for refs/heads/main.\nremote: error: Changes must be made through a pull request.\nTo github.com:ketan/iris-mlops.git\n ! [remote rejected] main -> main (protected branch hook declined)\nerror: failed to push some refs to 'github.com:ketan/iris-mlops.git'`);
+        if(S.pushed[b]===true){t.print('Everything up-to-date');return true}
+        const isNew=S.pushed[b]===undefined;t.print(`Enumerating objects: 9, done.\nCounting objects: 100% (9/9), done.\nDelta compression using up to 8 threads\nWriting objects: 100% (5/5), 611 bytes | 611.00 KiB/s, done.\nTotal 5 (delta 3), reused 0 (delta 0)\nTo github.com:ketan/iris-mlops.git\n ${isNew?'* [new branch]     ':hex(7)+'..'+commits().slice(-1)[0].sha+' '} ${b} -> ${b}`);
+        if(isNew&&(f.u||f['set-upstream']))t.print(`branch '${b}' set up to track 'origin/${b}'.`);
+        if(isNew&&!S.pr)t.print(`remote:\nremote: Create a pull request for '${b}' on GitHub by visiting:\nremote:      https://github.com/ketan/iris-mlops/pull/new/${b}\nremote:`);
+        S.pushed[b]=true;if(S.pr&&!S.pr.merged&&S.pr.branch===b){startRun('ci',commits().slice(-1)[0].msg,b,'pull_request');t.print('(the open PR got a new commit → CI started again: gh run watch)','dim')}ch();return true}
+      case 'log':{const n=+(f.n||10);t.print(commits().slice(-n).reverse().map((c,i)=>`${c.sha}${i===0?` (HEAD -> ${S.branch}${S.pushed[S.branch]===true?`, origin/${S.branch}`:''})`:''} ${c.msg}`).join('\n'));return true}
+      case 'diff':{const files=[...S.dirty].filter(x=>!S.staged.has(x)||f.staged||f.cached);if(!files.length)return true;
+        files.forEach(x=>{const a1=(S.head[x]||'').split('\n'),b1=S.files[x].split('\n');t.print(`diff --git a/${x} b/${x}\n--- a/${x}\n+++ b/${x}`,'hl');a1.filter(l=>!b1.includes(l)).forEach(l=>t.print('-'+l,'err'));b1.filter(l=>!a1.includes(l)).forEach(l=>t.print('+'+l,'ok'))});return true}
+      case 'pull':t.print('Already up to date.');return true;
+      case 'restore':{const p=pos[0];if(p&&S.dirty.has(p)){S.files[p]=S.head[p];S.dirty.delete(p);S.staged.delete(p);ch()}return true}
+    }
+    return fail(t,`git: '${sub}' is not a git command (or not simulated here). Try: status, checkout -b, add, commit, push, log, diff`)}
+
+  /* ---------- gh ---------- */
+  function gh(a,t){const [g1,g2]=a;const {pos,f}=parseArgs(a.slice(2),['title','t','body','b','f','R']);
+    if(g1==='pr'&&g2==='create'){if(S.branch==='main')return fail(t,'must be on a branch other than main to create a pull request');if(S.pushed[S.branch]!==true)return fail(t,'aborted: you must first push the current branch to a remote, or use the --head flag');
+      if(S.pr&&!S.pr.merged&&S.pr.branch===S.branch)return fail(t,`a pull request for branch "${S.branch}" into branch "main" already exists:\nhttps://github.com/ketan/iris-mlops/pull/${S.pr.num}`);
+      const title=(typeof f.title==='string'&&f.title)||commits().slice(-1)[0].msg;S.pr={num:42,title,branch:S.branch,merged:false};
+      t.print(`\nCreating pull request for ${S.branch} into main in ketan/iris-mlops\n\nhttps://github.com/ketan/iris-mlops/pull/42`);startRun('ci',title,S.branch,'pull_request');t.print('(opening the PR triggered the ci workflow: gh run watch)','dim');ch();return true}
+    if(g1==='pr'&&g2==='checks'){if(!S.pr)return fail(t,`no pull requests found for branch "${S.branch}"`);const r=prRun();if(!r){t.print('no checks reported on the branch');return false}
+      const row=s=>`${s}  ci/test (pull_request)  ${r.status==='completed'?Math.round((r.ended-r.started)/1000)+'s':''}  https://github.com/ketan/iris-mlops/actions/runs/${r.id}`;
+      if(r.status!=='completed'){t.print('Some checks are still pending\n0 cancelled, 0 failing, 0 successful, 0 skipped, and 1 pending checks\n\n'+row('*'),'hl');return false}
+      if(r.conclusion==='failure'){t.print('Some checks were not successful\n0 cancelled, 1 failing, 0 successful, 0 skipped, and 0 pending checks\n\n'+row('X'),'err');return false}
+      t.print('All checks were successful\n0 cancelled, 0 failing, 1 successful, 0 skipped, and 0 pending checks\n\n'+row('✓'),'ok');return true}
+    if(g1==='pr'&&g2==='view'){if(!S.pr)return fail(t,`no pull requests found for branch "${S.branch}"`);const r=prRun();t.print(`${S.pr.title} #${S.pr.num}\n${S.pr.merged?'Merged':'Open'} • ketan wants to merge ${commits().length-1} commit into main from ${S.pr.branch}\nChecks: ${r?(r.status!=='completed'?'pending':r.conclusion):'none'}\nhttps://github.com/ketan/iris-mlops/pull/${S.pr.num}`);return true}
+    if(g1==='pr'&&g2==='merge'){if(!S.pr||S.pr.merged)return fail(t,`no open pull requests found for branch "${S.branch}"`);const r=prRun();
+      if(!r||r.status!=='completed')return fail(t,`X Pull request #${S.pr.num} is not mergeable: required status check "test" is expected.\nTo have the pull request merged after all the requirements have been met, add the \`--auto\` flag.`);
+      if(r.conclusion!=='success')return fail(t,`X Pull request #${S.pr.num} is not mergeable: the base branch policy prohibits the merge.\n(required check "test" is failing — fix it first)`);
+      S.pr.merged=true;S.branches.main.push({sha:hex(7),msg:`${S.pr.title} (#${S.pr.num})`});t.print(`✓ Squashed and merged pull request #${S.pr.num} (${S.pr.title})`,'ok');
+      if(f['delete-branch']||f.d){const old=S.pr.branch;delete S.branches[old];S.branch='main';t.print(`✓ Deleted local branch ${old} and switched to branch main\n✓ Deleted remote branch ${old}`,'ok')}
+      startRun('cd',S.pr.title,'main','push');t.print('(the push to main triggered the cd workflow: build → scan → push → deploy to staging. gh run watch)','dim');ch();return true}
+    if(g1==='run'&&g2==='watch'){const id=pos[0];const r=id?S.runs.find(x=>String(x.id)===id):S.runs[0];if(!r)return fail(t,'found no in progress runs to watch');watch(t,r);return true}
+    if(g1==='run'&&g2==='list'){if(!S.runs.length){t.print('no runs found');return true}const rows=[['STATUS','TITLE','WORKFLOW','BRANCH','EVENT','ID','AGE']];S.runs.slice(0,8).forEach(r=>rows.push([r.status==='completed'?(r.conclusion==='success'?'✓':'X'):'*',r.title.slice(0,32),r.wf,r.branch,r.event,String(r.id),kage(r.started)]));t.print(table(rows,2));return true}
+    if(g1==='run'&&g2==='view'){const r=S.runs[0];if(!r)return fail(t,'no runs found');const bad=r.steps.find(s=>s.state==='fail');
+      if(f['log-failed']){if(!bad){t.print('(no failed steps)');return true}t.print(bad.err.split('\n').map(l=>`test\t${bad.name}\t${l}`).join('\n'));return true}
+      t.print(`${r.status==='completed'?(r.conclusion==='success'?'✓':'X'):'*'} ${r.branch} ${r.wf} · ${r.id}\n\nJOBS\n${r.status==='completed'?(r.conclusion==='success'?'✓':'X'):'*'} test\n`+r.steps.map(s=>`  ${({ok:'✓',fail:'X',skip:'-',running:'*',pending:'·'})[s.state]} ${s.name}`).join('\n')+(bad?'\n\nTo see the logs for the failed steps, try: gh run view --log-failed':''));return true}
+    if(g1==='workflow'&&g2==='list'){t.print(table([['NAME','STATE','ID'],['ci','active','71842011'],['cd','active','71842012']]));return true}
+    return fail(t,'gh: command not simulated. Try: gh pr create --fill | pr checks | pr view | pr merge --squash | run watch | run list | run view')}
+
+  /* ---------- dvc ---------- */
+  const STAGE_OUT={prepare:i=>`Splitting data/raw.csv → train 9,600 / test 2,400 rows (split=${i.split}, seed=${i.seed})`,featurize:i=>`Building ${featCount(i.feat)} features → data/features`,train:i=>`Training RandomForestClassifier(n_estimators=${i.n}, max_depth=${i.d}) … done in ${(i.n/100*1.4).toFixed(1)}s`,evaluate:()=>''};
+  function dvc(a,t){const sub=a[0];const k=keys();
+    switch(sub){
+      case 'dag':t.print('+---------+\n| prepare |\n+---------+\n      *\n      *\n+-----------+\n| featurize |\n+-----------+\n      *\n      *\n  +-------+\n  | train |\n  +-------+\n      *\n      *\n +----------+\n | evaluate |\n +----------+');return true;
+      case 'status':{const c=changed();if(!c.length){t.print('Data and pipelines are up to date.');return true}const now=inputs(),was=S.dvc.lockIn;
+        c.forEach(s=>{const lines=[`${s}:`];if(s==='prepare'){if(now.raw!==was.raw)lines.push('\tchanged deps:\n\t\tmodified:           data/raw.csv');if(now.split!==was.split||now.seed!==was.seed)lines.push('\tchanged deps:\n\t\tparams.yaml:\n\t\t\tmodified:   prepare.'+(now.split!==was.split?'split':'seed'))}
+          if(s==='featurize'){lines.push('\tchanged deps:\n\t\tmodified:           '+(now.feat!==was.feat?'src/features.py':'data/prepared'))}
+          if(s==='train'){if(now.n!==was.n||now.d!==was.d)lines.push('\tchanged deps:\n\t\tparams.yaml:\n\t\t\tmodified:   '+[now.n!==was.n?'train.n_estimators':'',now.d!==was.d?'train.max_depth':''].filter(Boolean).join(', '));else lines.push('\tchanged deps:\n\t\tmodified:           data/features')}
+          if(s==='evaluate')lines.push('\tchanged deps:\n\t\tmodified:           model.pkl');if(lines.length===1)lines.push('\tchanged deps:\n\t\tmodified:           (upstream)');t.print(lines.join('\n'))});return true}
+      case 'repro':{const c=changed();const i=inputs();if(!c.length){STAGES.forEach(s=>t.print(`Stage '${s}' didn't change, skipping`,'dim'));t.print('Data and pipelines are up to date.');return true}
+        STAGES.forEach(s=>{if(!c.includes(s)){t.print(`Stage '${s}' didn't change, skipping`,'dim');return}
+          const cmd={prepare:'python src/prepare.py data/raw.csv',featurize:'python src/featurize.py data/prepared data/features',train:'python src/train.py data/features model.pkl',evaluate:'python src/evaluate.py model.pkl data/features'}[s];
+          t.print(`Running stage '${s}':\n> ${cmd}`);if(s==='evaluate'){S.dvc.metrics=metricsFor(params(),S.dvc.rawVer);t.print(`accuracy=${S.dvc.metrics.accuracy}  f1=${S.dvc.metrics.f1}`)}else t.print(STAGE_OUT[s](i));S.dvc.lock[s]=k[s]});
+        S.dvc.lockIn=inputs();S.dvc.pushed=false;S.dvc.ran=true;S.dirty.add('dvc.lock');S.files['dvc.lock']=(S.files['dvc.lock']||'')+'#'+hex(4);if(!S.head['dvc.lock'])S.head['dvc.lock']='';
+        t.print("Updating lock file 'dvc.lock'\n\nTo track the changes with git, run:\n\n\tgit add dvc.lock\n\nTo enable auto staging, run:\n\n\tdvc config core.autostage true\nUse `dvc push` to send your updates to remote storage.");ch();return true}
+      case 'metrics':{if(a[1]==='show'){t.print(table([['Path','accuracy','f1'],['metrics.json',S.dvc.metrics.accuracy,S.dvc.metrics.f1]],4));if(changed().length)t.print('(metrics.json is stale: some stages changed since it was produced — run dvc repro)','dim');return true}
+        if(a[1]==='diff'){const h=S.dvc.headMetrics,w=S.dvc.metrics;if(h.accuracy===w.accuracy){t.print('(no metric changes between HEAD and workspace)','dim');return true}
+          const d=x=>(x>0?'':'')+(x).toFixed(3);t.print(table([['Path','Metric','HEAD','workspace','Change'],['metrics.json','accuracy',h.accuracy,w.accuracy,d(w.accuracy-h.accuracy)],['metrics.json','f1',h.f1,w.f1,d(w.f1-h.f1)]],4));return true}
+        return fail(t,'usage: dvc metrics show | diff')}
+      case 'params':{if(a[1]!=='diff')return fail(t,'usage: dvc params diff');const h=params(S.head['params.yaml']),w=params();const rows=[['Path','Param','HEAD','workspace']];
+        [['prepare.split','split'],['prepare.seed','seed'],['train.n_estimators','n'],['train.max_depth','d']].forEach(([n,k2])=>{if(h[k2]!==w[k2])rows.push(['params.yaml',n,h[k2],w[k2]])});if(rows.length===1){t.print('(no param changes)','dim');return true}t.print(table(rows,4));return true}
+      case 'push':if(S.dvc.pushed){t.print('Everything is up to date.');return true}S.dvc.pushed=true;t.print('Collecting                                       |4.00 [00:00, 312entry/s]\nPushing\n4 files pushed to remote \'storage\' (s3://iris-mlops-dvc)');ch();return true;
+      case 'pull':t.print('Collecting                                       |4.00 [00:00, 298entry/s]\nFetching\nEverything is up to date.');return true;
+      case 'version':case '--version':t.print('3.56.0');return true;
+    }
+    return fail(t,`ERROR: unexpected error - dvc ${sub||''} is not simulated here. Try: dag, status, repro, metrics show|diff, params diff, push`)}
+
+  /* ---------- mlflow & python scripts ---------- */
+  const NAMES=['silent-owl','brave-fox','calm-hawk','swift-lynx','bold-heron','keen-otter','wise-crane','neat-yak'];
+  function trainRun(args,t){const {f}=parseArgs(args,['n-estimators','max-depth']);const n=+(f['n-estimators']||100),d=+(f['max-depth']||5);const m=metricsFor({n,d},2);
+    const local=!S.env.MLFLOW_TRACKING_URI;const run={id:hex(32),name:`${NAMES[S.ml.runs.length%NAMES.length]}-${100+(Math.random()*900|0)}`,n,d,...m,t:Date.now(),local,size:+(n*0.0115).toFixed(1),p95:+(6+n*0.022).toFixed(1)};S.ml.runs.push(run);
+    t.print(`Training RandomForestClassifier(n_estimators=${n}, max_depth=${d}) …\naccuracy=${m.accuracy}  f1=${m.f1}`);
+    if(local)t.print(`(MLFLOW_TRACKING_URI is not set — this run was logged to ./mlruns on your laptop only. Teammates and CI can't see it.)`,'hl');
+    else t.print(`🏃 View run ${run.name} at: http://localhost:5000/#/experiments/1/runs/${run.id}\n🧪 View experiment at: http://localhost:5000/#/experiments/1`,'dim');ch();return true}
+  function bestRun(){const r=S?S.ml.runs.filter(r=>!r.local&&!r.baseline).sort((a,b)=>b.accuracy-a.accuracy||a.p95-b.p95)[0]:null;return r?r.id.slice(0,12):'<run-id>'}
+  const model=()=>S.ml.models['iris-classifier'];
+  const verBy=(m,ref)=>{if(!m)return null;if(/^\d+$/.test(ref))return m.versions.find(v=>v.v===+ref);return m.versions.find(v=>v.aliases.includes(ref))};
+  function python(a,t){const script=a[0];const {f}=parseArgs(a.slice(1),['run-id','name','challenger','champion','version','alias','min-accuracy','compare-to','n-estimators','max-depth']);
+    switch(script){
+      case 'src/train.py':return trainRun(a.slice(1),t);
+      case 'scripts/validate_data.py':t.print('✔ schema OK: 5 columns, 150 rows, no nulls in required fields, all values within expected ranges');return true;
+      case 'scripts/quality_gate.py':{const min=+(f['min-accuracy']||0.9);const m=S.dvc.metrics,h=S.dvc.headMetrics;if(changed().length)return fail(t,'metrics.json is stale — run `dvc repro` first so the gate checks the model you are about to commit.');
+        const c1=m.accuracy>=min,c2=f['compare-to']?m.accuracy>=+(h.accuracy-0.005).toFixed(3):true;
+        t.print(`Quality gate\n  accuracy  ${m.accuracy}  ≥ ${min} (minimum)          ${c1?'✔':'✖'}`+(f['compare-to']?`\n  accuracy  ${m.accuracy}  ≥ ${h.accuracy} − 0.005 (${f['compare-to']})   ${c2?'✔':'✖'}`:''));
+        if(c1&&c2){t.print('PASS: model may be committed and registered','ok');return true}return fail(t,'FAIL: exit code 1 → in CI this blocks the merge')}
+      case 'scripts/runs_table.py':{const rs=S.ml.runs.filter(r=>!r.local);if(!rs.length){t.print('(no runs on the tracking server yet)');return true}const best=bestRun();
+        t.print(table([['run_id','name','n_estimators','max_depth','accuracy','p95_ms','size_mb']].concat(rs.slice().sort((x,y)=>y.accuracy-x.accuracy).map(r=>[r.id.slice(0,12)+(r.id.startsWith(best)&&!r.baseline?' ★':''),r.name,r.n,r.d,r.accuracy,r.p95,r.size])),2));return true}
+      case 'scripts/register.py':{const id=f['run-id'],name=f.name;if(!id||!name||id===true||name===true)return fail(t,'usage: python scripts/register.py --run-id RUN_ID --name MODEL_NAME');
+        const r=S.ml.runs.find(x=>x.id.startsWith(id)&&id.length>=6);if(!r)return fail(t,`mlflow.exceptions.MlflowException: Run '${id}' not found`);if(r.local)return fail(t,'MlflowException: this run only exists in ./mlruns on your laptop — re-run training with MLFLOW_TRACKING_URI set');
+        S.ml.models[name]=S.ml.models[name]||{versions:[]};const v=S.ml.models[name].versions.length+1;S.ml.models[name].versions.push({v,run:r,aliases:[]});
+        t.print(`Successfully registered model '${name}'.\nCreated version '${v}' of model '${name}'.`);ch();return true}
+      case 'scripts/compare.py':{const m=model();const ch1=verBy(m,String(f.challenger)),cp=verBy(m,String(f.champion||'champion'));if(!ch1||!cp)return fail(t,'MlflowException: model version not found — check --challenger / --champion');
+        const A=cp.run,B=ch1.run;const win=B.accuracy>A.accuracy&&B.p95<50;
+        t.print(`Evaluating on the same holdout set (2,400 rows)\n`+table([['metric',`champion v${cp.v}`,`challenger v${ch1.v}`,'Δ'],['accuracy',A.accuracy,B.accuracy,(B.accuracy-A.accuracy).toFixed(3)],['f1',A.f1,B.f1,(B.f1-A.f1).toFixed(3)],['p95 latency ms',A.p95,B.p95,(B.p95-A.p95).toFixed(1)],['model size MB',A.size,B.size,(B.size-A.size).toFixed(1)]],3));
+        t.print(win?`VERDICT: PROMOTE v${ch1.v} — more accurate and within the 50 ms latency budget`:`VERDICT: KEEP CHAMPION — challenger is not better on accuracy, or breaks the latency budget`,win?'ok':'err');return win}
+      case 'scripts/promote.py':{const m=model();const v=verBy(m,String(f.version));const al=f.alias||'champion';if(!v)return fail(t,`MlflowException: Registered model 'iris-classifier' version ${f.version} not found`);
+        const prev=m.versions.find(x=>x.aliases.includes(al));m.versions.forEach(x=>x.aliases=x.aliases.filter(y=>y!==al&&y!=='previous'));v.aliases.push(al);if(prev&&prev!==v)prev.aliases.push('previous');
+        t.print(`Alias '${al}' → version ${v.v}${prev&&prev!==v?` (was version ${prev.v}, now tagged 'previous' for rollback)`:''}`);t.print('(anything that loads models:/iris-classifier@champion now gets this version — no code change needed)','dim');ch();return true}
+    }
+    if(!script)return fail(t,'(interactive Python is not simulated)');return fail(t,`python: can't open file '/home/ketan/iris-mlops/${script}': [Errno 2] No such file or directory`)}
+  function mlflow(a,t){const sub=a[0];const {f}=parseArgs(a.slice(1),['m','p','n','experiment-id','env-manager','model-uri']);
+    if(sub==='runs'&&a[1]==='list'){if(!f['experiment-id']&&!a.join(' ').includes('experiment-id'))return fail(t,"Error: Missing option '--experiment-id'.");const rs=S.ml.runs.filter(r=>!r.local);
+      t.print(table([['Date','Name','ID']].concat(rs.map(r=>[new Date(r.t).toISOString().slice(0,19).replace('T',' '),r.name,r.id])),2));return true}
+    if(sub==='models'&&a[1]==='serve'){const uri=f.m||f['model-uri'];const v=resolveUri(uri);if(!v)return fail(t,`mlflow.exceptions.MlflowException: Could not resolve '${uri}'. Is the alias set? (python scripts/promote.py …)`);
+      S.ml.serving={port:+(f.p||5000),v:v.v};t.print(`Downloading artifacts: 100%|██████████| 5/5\n${new Date().toISOString().slice(0,19).replace('T',' ')} INFO mlflow.models.flavor_backend_registry: Selected backend for flavor 'python_function'\nINFO:     Started server process [48211]\nINFO:     Uvicorn running on http://127.0.0.1:${S.ml.serving.port} (Press CTRL+C to quit)`);t.print(`(serving iris-classifier v${v.v} in the background — try the curl command)`,'dim');ch();return true}
+    if(sub==='models'&&a[1]==='build-docker'){const uri=f.m||f['model-uri'];const v=resolveUri(uri);if(!v)return fail(t,`MlflowException: Could not resolve '${uri}'`);const name=f.n||'mlflow-pyfunc-servable';
+      t.print(`Building docker image with name ${name}\n[+] Building 48.2s (14/14) FINISHED\n => [internal] load build definition from Dockerfile\n => [1/8] FROM docker.io/library/python:3.11-slim\n => [5/8] RUN pip install mlflow==2.17.2 scikit-learn==1.5.2\n => [7/8] COPY model_dir/ /opt/ml/model\n => exporting to image\n => => naming to docker.io/${name}`);
+      t.print(`(image ${name} contains model v${v.v} and its exact environment — the deployment lab below releases it)`,'dim');return true}
+    if(sub==='--version')return t.print('mlflow, version 2.17.2'),true;
+    return fail(t,'mlflow: try `mlflow runs list --experiment-id 1`, `mlflow models serve -m URI -p 5001 --env-manager local`, `mlflow models build-docker -m URI -n NAME`')}
+  function resolveUri(uri){const m=/^models:\/([^@/]+)(?:@(\w+)|\/(\d+))$/.exec(uri||'');if(!m)return null;return verBy(S.ml.models[m[1]],m[2]||m[3])}
+  function curl(a,t){const url=a.find(x=>/localhost|127\.0\.0\.1/.test(x))||'';const pm=/:(\d+)(\/\S*)?/.exec(url);if(!pm)return fail(t,'curl: (3) URL rejected');const port=+pm[1],path=pm[2]||'/';
+    if(!S.ml.serving||S.ml.serving.port!==port)return fail(t,`curl: (7) Failed to connect to localhost port ${port}: Connection refused`);
+    if(path.startsWith('/ping')||path.startsWith('/health')){t.print('');return true}if(!path.startsWith('/invocations'))return fail(t,'{"error_code": "ENDPOINT_NOT_FOUND"}');
+    const d=a[a.indexOf('-d')+1]||a[a.indexOf('--data')+1]||'';let rows;try{rows=JSON.parse(d).inputs}catch(e){return fail(t,'{"error_code": "BAD_REQUEST", "message": "Failed to parse input. Send JSON like {\\"inputs\\": [[5.1, 3.5, 1.4, 0.2]]}"}')}
+    t.print(JSON.stringify({predictions:rows.map(r=>r[2]<2.5?0:r[2]<4.9?1:2)}));return true}
+
+  /* ---------- dispatcher ---------- */
+  function one(raw,t){const a=tokenize(raw);const c0=a[0];if(!c0)return true;
+    if(c0==='clear'){t.clear();return true}
+    if(c0==='help'){t.print(`Simulated in this lab (repo: ~/iris-mlops):
+  git status | checkout -b B | switch B | add . | commit -m "msg" | commit -am "msg" | push [-u origin B] | log --oneline | diff
+  gh pr create --fill | pr checks | pr view | pr merge --squash [--delete-branch] | run watch | run list | run view [--log-failed]
+  pytest -q   ruff check .   python scripts/validate_data.py data/sample.csv
+  dvc dag | status | repro | metrics show | metrics diff | params diff | push | pull
+  python scripts/quality_gate.py --min-accuracy 0.90 [--compare-to main]
+  export MLFLOW_TRACKING_URI=http://localhost:5000
+  python src/train.py [--n-estimators N] [--max-depth D]    mlflow runs list --experiment-id 1
+  python scripts/runs_table.py | register.py --run-id ID --name NAME | compare.py --challenger V --champion champion
+  python scripts/promote.py --name NAME --version V --alias champion
+  mlflow models serve -m "models:/NAME@champion" -p 5001 --env-manager local   curl -X POST localhost:5001/invocations …
+  mlflow models build-docker -m "models:/NAME@champion" -n IMAGE
+  ls [dir]  cat FILE  echo "text" >> FILE  sed -i 's/old/new/' FILE  clear       (chain with &&)`);return true}
+    if(c0==='ls'){const d=(a[1]||'').replace(/\/$/,'');if(!d){t.print(LIST1.join('  '));return true}const fs=Object.keys(S.files).filter(x=>x.startsWith(d+'/')).map(x=>x.slice(d.length+1));
+      if(d==='data'){t.print('raw.csv  raw.csv.dvc  sample.csv'+(S.dvc.ran?'  prepared/  features/':''));return true}if(!fs.length)return fail(t,`ls: cannot access '${d}': No such file or directory`);t.print(fs.join('  '));return true}
+    if(c0==='cat'){const p=a[1];if(p==='metrics.json'){t.print(JSON.stringify(S.dvc.metrics,null,2));return true}if(p==='dvc.lock'){t.print(`schema: '2.0'\nstages:\n`+STAGES.map(s=>`  ${s}:\n    md5: ${S.dvc.lock[s]}`).join('\n'));return true}
+      if(!(p in S.files))return fail(t,`cat: ${p||''}: No such file or directory`);t.print(S.files[p]);return true}
+    if(c0==='echo'){const r=a.indexOf('>>')>=0?a.indexOf('>>'):a.indexOf('>');if(r<0){t.print(a.slice(1).join(' ').replace(/\$(\w+)/g,(m,v)=>S.env[v]||''));return true}const p=a[r+1];if(!(p in S.files))return fail(t,`bash: ${p}: No such file or directory`);
+      S.files[p]=(a[r]==='>>'?S.files[p]+'\n':'')+a.slice(1,r).join(' ');if(S.files[p]!==S.head[p])S.dirty.add(p);else S.dirty.delete(p);ch();return true}
+    if(c0==='sed'){const i=a.indexOf('-i');const expr=a.find((x,j)=>j>0&&x!=='-i'&&/^s./.test(x));const p=a[a.length-1];if(i<0)return fail(t,'(use sed -i to edit the file in place)');if(!expr||!(p in S.files))return fail(t,`sed: can't read ${p}: No such file or directory`);
+      const out=applySed(expr,S.files[p]);if(out===null)return fail(t,`sed: -e expression #1: unknown command`);if(out===S.files[p])t.print('(pattern not found — file unchanged)','dim');S.files[p]=out;if(S.files[p]!==S.head[p])S.dirty.add(p);else S.dirty.delete(p);ch();return true}
+    if(c0==='export'){const m=/^(\w+)=(.*)$/.exec(a[1]||'');if(!m)return fail(t,'usage: export NAME=value');S.env[m[1]]=m[2];ch();return true}
+    if(c0==='unset'){delete S.env[a[1]];ch();return true}
+    if(c0==='pwd'){t.print('/home/ketan/iris-mlops');return true}
+    if(c0==='git')return git(a.slice(1),t);
+    if(c0==='gh')return gh(a.slice(1),t);
+    if(c0==='dvc')return dvc(a.slice(1),t);
+    if(c0==='mlflow')return mlflow(a.slice(1),t);
+    if(c0==='python'||c0==='python3')return python(a.slice(1),t);
+    if(c0==='curl')return curl(a.slice(1),t);
+    if(c0==='pytest'){const ok=testsOk(S.files);if(ok){t.print('............                                                             [100%]\n12 passed in 0.81s','ok');return true}t.print(testFailLog(S.files),'err');return true}
+    if(c0==='ruff'){if(lintOk(S.files)){t.print('All checks passed!','ok');return true}t.print(lintFailLog,'err');return true}
+    if(c0==='kubectl'||c0==='docker')return fail(t,`(${c0} lives in the deployment lab, section 06)`);
+    return fail(t,`bash: ${c0}: command not found`)}
+  function handle(raw,t){return runChain(raw,t,one)}
+
+  function render(el){const b=S.branch,cm=commits();const r=S.runs[0];const st=x=>x.status!=='completed'?'<span class="badge b-run">running</span>':x.conclusion==='success'?'<span class="badge b-ok">✓ passed</span>':'<span class="badge b-fail">✗ failed</span>';
+    const c=changed();const k=keys();
+    const stage=s=>`<div class="mst ${c.includes(s)?'changed':S.dvc.ran?'fresh':''}"><span>${s}</span><span>${c.includes(s)?'changed':'up to date'}</span></div>`;
+    const m=model();
+    el.innerHTML=`<div class="panels">
+      <div class="pnl"><div class="vh">🐙 GitHub · iris-mlops <small>${esc(b)}</small></div>
+        <div class="kv"><span>uncommitted</span><span>${S.dirty.size?[...S.dirty].map(esc).join(', '):'—'}</span></div>
+        <div class="kv"><span>last commit</span><span>${esc(cm[cm.length-1].msg.slice(0,28))}</span></div>
+        <div class="kv"><span>pushed</span><span>${S.pushed[b]===true?'yes':S.pushed[b]===false?'ahead of origin':'not on remote'}</span></div>
+        <div class="kv"><span>pull request</span><span>${S.pr?`#${S.pr.num} ${S.pr.merged?'<span class="badge b-vio">merged</span>':'<span class="badge b-gray">open</span>'}`:'—'}</span></div>
+        <div class="vsec"><b>Workflow runs</b>${S.runs.length?S.runs.slice(0,3).map(x=>`<div class="kv"><span>${x.wf} · ${esc(x.branch.slice(0,18))}</span><span>${st(x)}</span></div>`).join(''):'<span class="empty">no runs yet</span>'}</div></div>
+      <div class="pnl"><div class="vh">🔁 DVC pipeline <small>remote: ${S.dvc.pushed?'in sync':'<b style="color:var(--warn)">needs dvc push</b>'}</small></div>
+        <div class="mstages">${STAGES.map(stage).join('')}</div>
+        <div class="vsec"><div class="kv"><span>accuracy (workspace)</span><span>${S.dvc.metrics.accuracy}</span></div><div class="kv"><span>accuracy (HEAD)</span><span>${S.dvc.headMetrics.accuracy}</span></div><div class="kv"><span>n_estimators / max_depth</span><span>${params().n} / ${params().d}</span></div></div></div>
+      <div class="pnl"><div class="vh">🧪 MLflow <small>${S.env.MLFLOW_TRACKING_URI?'server: localhost:5000':'<b style="color:var(--warn)">URI not set</b>'}</small></div>
+        <div class="vsec"><b>Runs</b>${S.ml.runs.length?S.ml.runs.slice(-4).reverse().map(x=>`<div class="kv"><span>${esc(x.name)}${x.local?' (local)':''}</span><span>${x.accuracy}</span></div>`).join(''):'<span class="empty">no runs</span>'}</div>
+        <div class="vsec"><b>Registry · iris-classifier</b>${m?m.versions.map(v=>`<div class="kv"><span>v${v.v} · acc ${v.run.accuracy}</span><span>${v.aliases.map(x=>`<span class="badge ${x==='champion'?'b-ok':'b-gray'}">@${x}</span>`).join(' ')||'—'}</span></div>`).join(''):'<span class="empty">no registered models</span>'}</div>
+        ${S.ml.serving?`<div class="kv"><span>serving</span><span class="badge b-run">v${S.ml.serving.v} on :${S.ml.serving.port}</span></div>`:''}</div></div>`}
+  return sim}
+
+/* ---------------- Argo Rollouts simulator ---------------- */
+const FILES_CD={
+'rollout.yaml':`apiVersion: argoproj.io/v1alpha1
+kind: Rollout                     # a Deployment with release superpowers
+metadata:
+  name: iris-api
+spec:
+  replicas: 5
+  selector:
+    matchLabels: { app: iris-api }
+  template:
+    metadata:
+      labels: { app: iris-api }
+    spec:
+      containers:
+        - name: iris-api
+          image: ketan/iris-api:1.0
+          ports: [{ containerPort: 8000 }]
+  strategy:
+    canary:
+      canaryService: iris-canary
+      stableService: iris-stable
+      trafficRouting:
+        nginx:
+          stableIngress: iris-ingress  # exact % split at the ingress
+      analysis:                        # background checks during the rollout
+        templates:
+          - templateName: model-health
+        startingStep: 1
+      steps:
+        - setWeight: 20
+        - pause: {}                    # wait for: kubectl argo rollouts promote
+        - setWeight: 50
+        - pause: { duration: 10m }
+        - setWeight: 100`,
+'analysis.yaml':`apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: model-health
+spec:
+  metrics:
+    - name: success-rate
+      interval: 1m
+      failureLimit: 0                  # one bad measurement aborts the rollout
+      successCondition: result[0] >= 0.99
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            sum(rate(http_requests_total{app="iris-api",track="canary",status!~"5.."}[2m]))
+            /
+            sum(rate(http_requests_total{app="iris-api",track="canary"}[2m]))
+    - name: p95-latency
+      interval: 1m
+      failureLimit: 0
+      successCondition: result[0] < 0.5   # seconds
+      provider:
+        prometheus:
+          address: http://prometheus.monitoring:9090
+          query: |
+            histogram_quantile(0.95, sum(rate(
+              prediction_latency_seconds_bucket{app="iris-api",track="canary"}[2m])) by (le))`,
+'rollout-bluegreen.yaml':`apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: iris-api-bg
+spec:
+  replicas: 3
+  selector:
+    matchLabels: { app: iris-api-bg }
+  template:
+    metadata:
+      labels: { app: iris-api-bg }
+    spec:
+      containers:
+        - name: iris-api
+          image: ketan/iris-api:2.0
+  strategy:
+    blueGreen:
+      activeService: iris-active      # http://iris.local
+      previewService: iris-preview    # http://preview.iris.local
+      autoPromotionEnabled: false     # wait for a human to promote
+      scaleDownDelaySeconds: 300      # keep the old version up for fast rollback`,
+'send_traffic.sh':`#!/usr/bin/env bash
+# usage: ./send_traffic.sh N   — sends N prediction requests and summarises who answered
+for i in $(seq 1 "$1"); do
+  curl -s -X POST http://iris.local/predict -d '{"inputs":[[5.1,3.5,1.4,0.2]]}'
+done | jq -r '.model_version' | sort | uniq -c`,
+'smoke_test.sh':`#!/usr/bin/env bash
+# usage: ./smoke_test.sh URL — health, schema and a golden-set accuracy check
+set -e
+curl -fs "$1/health"
+curl -fs -X POST "$1/predict" -d @golden_request.json | python check_schema.py
+python golden_set.py --url "$1" --min-accuracy 0.95`
+};
+function createRolloutSim(){
+  const Q={'ketan/iris-api:1.0':{p95:112,err:0.1},'ketan/iris-api:2.0':{p95:118,err:0.1},'ketan/iris-api:2.1':{p95:104,err:0.1},'ketan/iris-api:3.0':{p95:870,err:4.2}};
+  let S,gen=0,dirty=false;const sim={onChange(){},reset,handle,render,arName};
+  const fail=(t,m)=>{t.print(m,'err');return false};const mark=()=>{dirty=true};
+  setInterval(()=>{if(S)tick();if(dirty){dirty=false;sim.onChange()}},300);
+  const PODS_START=1600;
+  function reset(sc){gen++;S={ro:null,ars:[],files:{}};(sc.files||[]).forEach(f=>S.files[f]=FILES_CD[f]);sc.setup(api);mark()}
+  const newRev=(ro,image,ago)=>{const r={rev:ro.revs.length+1,image,hash:kid(9),created:Date.now()-(ago||0),pods:[],readyAt:Date.now()+(ago?0:PODS_START),down:false};ro.revs.push(r);return r};
+  const api={canary(hist){const ro={name:'iris-api',strategy:'canary',replicas:5,revs:[],created:Date.now()-720000,step:5,weight:0,status:'Healthy',message:'',canary:null};hist.forEach((img,i)=>{const r=newRev(ro,img,720000-i*1000);if(i<hist.length-1)r.down=true});ro.stable=ro.revs[ro.revs.length-1];S.ro=ro},
+    bluegreen(img){const ro={name:'iris-api-bg',strategy:'bluegreen',replicas:3,revs:[],created:Date.now()-600000,status:'Healthy',message:'',preview:null,old:null,oldDownAt:0};ro.active=newRev(ro,img,600000);S.ro=ro}};
+  function arName(){const a=S&&S.ars[S.ars.length-1];return a?a.name:'iris-api-…'}
+  const imgOk=img=>!!Q[img];
+  function podsFor(r,n){while(r.pods.length<n)r.pods.push(`${S.ro.name}-${r.hash}-${kid(5)}`);return r.pods.slice(0,n)}
+  function startCanary(ro,img){if(ro.canary&&ro.canary.image===img)return;const prev=ro.revs.find(r=>r.image===img&&r!==ro.stable);
+    if(img===ro.stable.image){if(ro.canary){ro.canary.down=true;ro.canary=null}ro.weight=0;ro.step=5;ro.status='Healthy';ro.message='';ro.aborted=false;stopAnalysis('Successful');return 'stable'}
+    if(ro.canary)ro.canary.down=true;let r;if(prev){r=prev;r.down=false;r.readyAt=Date.now()+PODS_START;ro.revs=ro.revs.filter(x=>x!==prev);r.rev=ro.revs.length+1;ro.revs.push(r)}else r=newRev(ro,img);
+    ro.canary=r;ro.step=0;ro.weight=0;ro.status='Progressing';ro.message='more replicas need to be updated';ro.aborted=false;ro.t0=Date.now();stopAnalysis('Terminated');mark();return 'new'}
+  function startAnalysis(ro){const a={name:`${ro.name}-${ro.canary.hash}-${ro.canary.rev}`,status:'Running',m:{'success-rate':[],'p95-latency':[]},started:Date.now(),img:ro.canary.image,next:Date.now()+900};S.ars.push(a);ro.ar=a}
+  function stopAnalysis(st){const a=S.ro&&S.ro.ar;if(a&&a.status==='Running')a.status=st;if(S.ro)S.ro.ar=null}
+  function abort(ro,msg){ro.weight=0;ro.status='Degraded';ro.aborted=true;ro.message=msg||`RolloutAborted: Rollout aborted update to revision ${ro.canary.rev}`;if(ro.ar&&ro.ar.status==='Running')ro.ar.status='Terminated';ro.ar=null;mark()}
+  function tick(){const ro=S.ro;if(!ro)return;const now=Date.now();
+    if(ro.strategy==='canary'){const c=ro.canary;if(!c||ro.aborted)return;
+      if(!imgOk(c.image)){if(now-ro.t0>7000&&ro.status!=='Degraded'){ro.status='Degraded';ro.aborted=true;ro.message=`ProgressDeadlineExceeded: ReplicaSet "${ro.name}-${c.hash}" has timed out progressing. (ImagePullBackOff)`;mark()}return}
+      if(ro.step===0&&now>=c.readyAt){ro.weight=20;ro.step=1;ro.status='Paused';ro.message='CanaryPauseStep';startAnalysis(ro);mark()}
+      if(ro.step===2){ro.weight=50;ro.step=3;ro.pauseUntil=now+5000;ro.status='Paused';ro.message='CanaryPauseStep';mark()}
+      if(ro.step===3&&now>=ro.pauseUntil){ro.step=4;ro.weight=100;ro.status='Progressing';ro.message='';ro.doneAt=now+900;mark()}
+      if(ro.step===4&&now>=ro.doneAt){ro.stable.down=true;ro.stable=c;ro.canary=null;ro.weight=0;ro.step=5;ro.status='Healthy';ro.message='';stopAnalysis('Successful');mark()}
+      const a=ro.ar;if(a&&a.status==='Running'&&now>=a.next){const q=Q[a.img];const sr=+(1-q.err/100*(0.8+Math.random()*0.5)).toFixed(3),lat=+(q.p95/1000*(0.95+Math.random()*0.1)).toFixed(3);
+        a.m['success-rate'].push(sr);a.m['p95-latency'].push(lat);a.next=now+1800;mark();
+        if(sr<0.99||lat>=0.5){a.status='Failed';a.failed=sr<0.99?'success-rate':'p95-latency';abort(ro,`RolloutAborted: Rollout aborted update to revision ${c.rev}: Metric "${a.failed}" assessed Failed due to failed (1) > failureLimit (0)`)}}}
+    else{if(ro.preview&&ro.status==='Progressing'&&imgOk(ro.preview.image)&&now>=ro.preview.readyAt){ro.status='Paused';ro.message='BlueGreenPause';mark()}
+      if(ro.old&&!ro.old.down&&now>=ro.oldDownAt){ro.old.down=true;mark()}}}
+  /* ---- routing ---- */
+  function pick(host){const ro=S.ro;if(!ro)return null;if(ro.strategy==='canary'){if(host.startsWith('preview'))return null;return ro.canary&&!ro.aborted&&ro.weight>0&&Math.random()*100<ro.weight?ro.canary:ro.stable}
+    if(host.startsWith('preview'))return ro.preview&&now0()>=ro.preview.readyAt?ro.preview:ro.active;return ro.active}
+  const now0=()=>Date.now();
+  function respond(r){const q=Q[r.image];const bad=Math.random()*100<q.err;const pod=podsFor(r,S.ro.replicas)[Math.random()*S.ro.replicas|0];
+    return bad?{code:500,body:`{"error":"InferenceError: model returned NaN probabilities","model_version":"${splitRef(r.image)[1]}","pod":"${pod}"}`}:{code:200,body:`{"prediction":"setosa","model_version":"${splitRef(r.image)[1]}","pod":"${pod}"}`,lat:q.p95*(0.5+Math.random()*0.5)}}
+  /* ---- printing ---- */
+  const sym={Healthy:'✔ Healthy',Paused:'॥ Paused',Progressing:'◌ Progressing',Degraded:'✖ Degraded'};
+  function tree(ro){const rows=[['NAME','KIND','STATUS','AGE','INFO']];const now=Date.now();rows.push([`⟳ ${ro.name}`,'Rollout',sym[ro.status],kage(ro.created),'']);
+    const shown=ro.revs.slice().reverse().filter(r=>!r.down||r===ro.revs[ro.revs.length-1]).slice(0,3);const older=ro.revs.slice().reverse().find(r=>r.down&&!shown.includes(r));if(older)shown.push(older);
+    shown.forEach((r,ri)=>{const last=ri===shown.length-1;const p1=last?'└──':'├──',bar=last?'   ':'│  ';rows.push([`${p1}# revision:${r.rev}`,'','','','']);
+      let n=0,info='';const ready=now>=r.readyAt&&imgOk(r.image);
+      if(ro.strategy==='canary'){if(r===ro.stable){n=ro.replicas;info='stable'}else if(r===ro.canary){n=ro.aborted?0:Math.max(1,Math.ceil(ro.replicas*Math.max(ro.weight,ro.step===0?20:ro.weight)/100));info='canary'}}
+      else{if(r===ro.active){n=ro.replicas;info='stable,active'}else if(r===ro.preview){n=ro.replicas;info='preview'}else if(r===ro.old&&!r.down){n=ro.replicas;info=`delay:${Math.max(0,Math.round((ro.oldDownAt-now)/1000))}s`}}
+      const items=[];const rsSt=n===0?'• ScaledDown':ready?'✔ Healthy':imgOk(r.image)?'◌ Progressing':'✖ Degraded';items.push([`⧉ ${ro.name}-${r.hash}`,'ReplicaSet',rsSt,kage(r.created),info]);
+      podsFor(r,n).forEach(p=>items.push([`□ ${p}`,'Pod',ready?'✔ Running':imgOk(r.image)?'◌ ContainerCreating':'✖ ImagePullBackOff',kage(r.created),ready?'ready:1/1':'ready:0/1']));
+      S.ars.filter(a=>a.name.endsWith('-'+r.rev)&&a.name.includes(r.hash)).forEach(a=>items.push([`α ${a.name}`,'AnalysisRun',a.status==='Running'?'◌ Running':a.status==='Successful'?'✔ Successful':a.status==='Failed'?'✖ Failed':'◌ Terminated',kage(a.started),`✔ ${a.m['success-rate'].filter(x=>x>=0.99).length+a.m['p95-latency'].filter(x=>x<0.5).length}${a.status==='Failed'?',✖ 1':''}`]));
+      items.forEach((it,ii)=>{const l2=ii===items.length-1&&true;const pre=ii===0?(items.length>1&&items[1][1]==='Pod'?'':''):'';
+        const isPod=it[1]==='Pod';const prefix=bar+(isPod?'│  '+(ii===items.length-1||items[ii+1][1]!=='Pod'?'└──':'├──'):(ii===items.length-1?'└──':'├──'));rows.push([prefix+it[0],it[1],it[2],it[3],it[4]])})});
+    return table(rows,2)}
+  function summary(ro){const lines=[`Name:            ${ro.name}`,'Namespace:       default',`Status:          ${sym[ro.status]}`];if(ro.message)lines.push(`Message:         ${ro.message}`);
+    if(ro.strategy==='canary'){lines.push('Strategy:        Canary',`  Step:          ${ro.step}/5`,`  SetWeight:     ${ro.canary?[20,20,50,50,100][Math.min(ro.step,4)]:100}`,`  ActualWeight:  ${ro.canary?ro.weight:100}`);
+      lines.push(`Images:          ${ro.stable.image} (stable)`+(ro.canary?`\n                 ${ro.canary.image} (canary)`:''))}
+    else{lines.push('Strategy:        BlueGreen',`Images:          ${ro.active.image} (stable, active)`+(ro.preview?`\n                 ${ro.preview.image} (preview)`:''))}
+    const extra=ro.strategy==='canary'?(ro.canary&&!ro.aborted?Math.max(1,Math.ceil(ro.replicas*Math.max(20,ro.weight)/100)):0):(ro.preview?ro.replicas:0)+(ro.old&&!ro.old.down?ro.replicas:0);
+    lines.push('Replicas:',`  Desired:       ${ro.replicas}`,`  Current:       ${ro.replicas+extra}`,`  Updated:       ${ro.strategy==='canary'?(ro.canary?(ro.aborted?0:extra):ro.replicas):ro.replicas}`,`  Ready:         ${ro.replicas+extra}`,`  Available:     ${ro.replicas+(ro.strategy==='canary'?extra:0)}`);return lines.join('\n')}
+  const sig=ro=>[ro.status,ro.step,ro.weight,ro.ar&&ro.ar.status,ro.preview&&ro.preview.rev,ro.active&&ro.active.rev,S.ars.length].join('|');
+  function getRollout(t,watch){const ro=S.ro;t.print(summary(ro)+'\n\n'+tree(ro));if(!watch)return;const g=gen;let last=sig(ro);const t0=Date.now();
+    const iv=setInterval(()=>{if(g!==gen){clearInterval(iv);return}if(sig(S.ro)!==last){last=sig(S.ro);t.print('\n'+summary(S.ro)+'\n\n'+tree(S.ro))}
+      if(Date.now()-t0>12000){clearInterval(iv);t.print('^C   (playground: --watch stops after 12 s)','dim')}},300)}
+  function traffic(n,t,host){const ro=S.ro;const cnt={};let err=0;const lats=[];for(let i=0;i<n;i++){const r=pick(host||'iris.local');const res=respond(r);cnt[r.image]=(cnt[r.image]||0)+1;if(res.code!==200)err++;else lats.push(res.lat)}
+    lats.sort((a,b)=>a-b);const p95=lats.length?lats[Math.floor(lats.length*0.95)-1||0]:0;t.print(`Sent ${n} prediction requests to http://${host||'iris.local'}/predict`);
+    Object.entries(cnt).sort().forEach(([img,c])=>t.print(`  ${img.padEnd(20)} ${'█'.repeat(Math.max(1,Math.round(c/n*40)))} ${c} (${Math.round(c/n*100)}%)`,Q[img].err>1?'err':''));
+    t.print(`  errors: ${err} (${(err/n*100).toFixed(1)}%)   p95 latency: ${Math.round(p95)} ms`,err?'err':'ok');return true}
+  function argo(a,t){const {pos,f}=parseArgs(a,['n']);const sub=pos[0];const ro=S.ro;
+    const needName=n=>{if(!n)return fail(t,`Error: accepts 1 arg(s), received 0`)||null;if(!ro||n!==ro.name)return fail(t,`Error: rollouts.argoproj.io "${n}" not found`)||null;return ro};
+    switch(sub){
+      case 'get':{if(pos[1]!=='rollout'&&pos[1]!=='ro')return fail(t,'usage: kubectl argo rollouts get rollout NAME [--watch]');const r=needName(pos[2]);if(!r)return false;getRollout(t,f.watch||f.w);return true}
+      case 'list':{t.print(table([['NAME','STRATEGY','STATUS','STEP','SET-WEIGHT','READY','DESIRED','UP-TO-DATE','AVAILABLE'],[ro.name,ro.strategy==='canary'?'Canary':'BlueGreen',ro.status,ro.strategy==='canary'?`${ro.step}/5`:'-',ro.strategy==='canary'?String(ro.canary?ro.weight:100):'-',`${ro.replicas}/${ro.replicas}`,String(ro.replicas),String(ro.replicas),String(ro.replicas)]]));return true}
+      case 'status':{const r=needName(pos[1]);if(!r)return false;t.print(r.status+(r.message?' - '+r.message:''));return r.status!=='Degraded'}
+      case 'set':{if(pos[1]!=='image')return fail(t,'usage: kubectl argo rollouts set image ROLLOUT CONTAINER=IMAGE');const r=needName(pos[2]);if(!r)return false;const pair=pos[3]||'';const [cn,img]=pair.split('=');
+        if(!img)return fail(t,'Error: expected CONTAINER=IMAGE, e.g. iris-api=ketan/iris-api:2.0');if(cn!=='iris-api')return fail(t,`Error: unable to find container named "${cn}"`);
+        if(r.strategy==='canary'){const res=startCanary(r,img);t.print(`rollout "${r.name}" image updated`);if(res==='stable')t.print('(that is the stable image: Argo skips the canary steps and returns to Healthy immediately)','dim');if(!imgOk(img))t.print('(hint: watch what happens to the new pods)','dim')}
+        else{if(r.active.image===img){t.print(`rollout "${r.name}" image updated`);return true}r.preview=newRev(r,img);r.status='Progressing';r.message='';t.print(`rollout "${r.name}" image updated`)}mark();return true}
+      case 'promote':{const r=needName(pos[1]);if(!r)return false;
+        if(r.strategy==='canary'){if(r.aborted)return fail(t,`Error: rollout "${r.name}" is aborted — fix the image (or undo) first, or use: kubectl argo rollouts retry rollout ${r.name}`);if(!r.canary)return fail(t,`Error: rollout "${r.name}" is not paused`);
+          if(f.full){r.step=4;r.weight=100;r.status='Progressing';r.doneAt=Date.now()+900}else if(r.step===1){r.step=2;r.status='Progressing'}else if(r.step===3){r.pauseUntil=0}else if(r.step===0)return fail(t,'(canary pods are still starting — wait for the rollout to pause at step 1)');
+          t.print(`rollout '${r.name}' promoted`);mark();return true}
+        if(!r.preview)return fail(t,`Error: rollout '${r.name}' has no preview to promote`);if(r.status!=='Paused')return fail(t,'(preview pods are still starting — check get rollout first)');
+        if(r.old)r.old.down=true;r.old=r.active;r.active=r.preview;r.preview=null;r.oldDownAt=Date.now()+15000;r.status='Healthy';r.message='';t.print(`rollout '${r.name}' promoted`);t.print('(all traffic switched at once. The old version stays up for scaleDownDelaySeconds — compressed to 15 s here — for an instant rollback)','dim');mark();return true}
+      case 'abort':{const r=needName(pos[1]);if(!r)return false;if(r.strategy==='canary'){if(!r.canary)return fail(t,`(nothing to abort: rollout "${r.name}" is not progressing)`);abort(r);t.print(`rollout '${r.name}' aborted`);return true}
+        if(!r.preview)return fail(t,'(nothing to abort)');r.preview.down=true;r.preview=null;r.status='Degraded';r.message='RolloutAborted';t.print(`rollout '${r.name}' aborted`);mark();return true}
+      case 'retry':{const r=needName(pos[2]||pos[1]);if(!r)return false;if(!r.aborted)return fail(t,'(rollout is not aborted)');const img=r.canary.image;r.canary.down=true;r.canary=null;startCanary(r,img);t.print(`rollout '${r.name}' retried`);return true}
+      case 'undo':{const r=needName(pos[1]);if(!r)return false;
+        if(r.strategy==='canary'){const target=r.canary?r.stable:r.revs.slice(0,-1).reverse().find(x=>x.image!==r.stable.image);if(!target)return fail(t,'Error: no previous revision found');startCanary(r,target.image);t.print(`rollout '${r.name}' undo`);
+          if(target===r.stable)t.print('(back to the stable revision: canary steps are skipped, so this is immediate)','dim');else t.print('(rolling back to an older revision goes through the canary steps again)','dim');mark();return true}
+        if(r.preview){r.preview.down=true;r.preview=null;r.status='Healthy';t.print(`rollout '${r.name}' undo`);mark();return true}
+        if(!r.old)return fail(t,'Error: no previous revision found');const wasUp=!r.old.down;const prev=r.active;r.active=r.old;r.active.down=false;r.old=prev;r.oldDownAt=Date.now()+15000;
+        if(!wasUp)r.active.readyAt=Date.now()+PODS_START;r.status='Healthy';t.print(`rollout '${r.name}' undo`);t.print(wasUp?'(instant: the previous ReplicaSet was still running, so traffic simply switched back)':'(the previous version had been scaled down, so its pods must start again first — this is why scaleDownDelaySeconds matters)','dim');mark();return true}
+      case 'dashboard':t.print('(the Argo Rollouts dashboard opens a browser UI on :3100 — not available in this playground)','dim');return true;
+      case 'version':t.print('kubectl-argo-rollouts: v1.7.2');return true;
+    }
+    return fail(t,'kubectl argo rollouts: try get rollout NAME [--watch] | set image NAME iris-api=IMAGE | promote NAME [--full] | abort NAME | undo NAME | list rollouts')}
+  function kubectl(a,t){if(a[0]==='argo'&&a[1]==='rollouts')return argo(a.slice(2),t);const ro=S.ro;const {pos}=parseArgs(a,['n','o']);
+    if(pos[0]==='get'&&/^(analysisruns?|ar)$/.test(pos[1]||'')){if(!S.ars.length){t.print('No resources found in default namespace.');return true}t.print(table([['NAME','STATUS','AGE']].concat(S.ars.map(x=>[x.name,x.status,kage(x.started)]))));return true}
+    if(pos[0]==='describe'&&/^(analysisruns?|ar)$/.test(pos[1]||'')){const x=S.ars.find(y=>y.name===pos[2])||(pos[2]?S.ars.find(y=>y.name.startsWith(pos[2])):S.ars[S.ars.length-1]);if(!x)return fail(t,`Error from server (NotFound): analysisruns.argoproj.io "${pos[2]||''}" not found`);
+      t.print(`Name:         ${x.name}\nStatus:       ${x.status}${x.failed?`\nMessage:      Metric "${x.failed}" assessed Failed due to failed (1) > failureLimit (0)`:''}\n\n`+table([['METRIC','MEASUREMENTS','CONDITION','RESULT'],['success-rate',x.m['success-rate'].join(', ')||'—','result[0] >= 0.99',x.m['success-rate'].some(v=>v<0.99)?'✖ Failed':x.m['success-rate'].length?'✔ Successful':'pending'],['p95-latency',x.m['p95-latency'].join(', ')||'—','result[0] < 0.5',x.m['p95-latency'].some(v=>v>=0.5)?'✖ Failed':x.m['p95-latency'].length?'✔ Successful':'pending']],3));return true}
+    if(pos[0]==='get'&&/^(rollouts?|ro)$/.test(pos[1]||'')){t.print(table([['NAME','DESIRED','CURRENT','UP-TO-DATE','AVAILABLE','AGE'],[ro.name,ro.replicas,ro.replicas,ro.replicas,ro.replicas,kage(ro.created)]]));return true}
+    if(pos[0]==='get'&&/^(pods?|po)$/.test(pos[1]||'')){const rows=[['NAME','READY','STATUS','RESTARTS','AGE']];const now=Date.now();
+      ro.revs.forEach(r=>{let n=0;if(ro.strategy==='canary'){if(r===ro.stable)n=ro.replicas;else if(r===ro.canary&&!ro.aborted)n=Math.max(1,Math.ceil(ro.replicas*Math.max(20,ro.weight)/100))}else{if(r===ro.active||r===ro.preview||(r===ro.old&&!r.down))n=ro.replicas}
+        const ready=now>=r.readyAt&&imgOk(r.image);podsFor(r,n).forEach(p=>rows.push([p,ready?'1/1':'0/1',ready?'Running':imgOk(r.image)?'ContainerCreating':'ImagePullBackOff','0',kage(r.created)]))});t.print(table(rows));return true}
+    return fail(t,'(this lab simulates kubectl argo rollouts …, kubectl get pods|rollout|analysisrun, kubectl describe analysisrun)')}
+  function one(raw,t){const a=tokenize(raw);const c0=a[0];if(!c0)return true;
+    if(c0==='clear'){t.clear();return true}
+    if(c0==='help'){t.print(`Simulated in this lab:
+  kubectl argo rollouts get rollout NAME [--watch]      kubectl argo rollouts list rollouts
+  kubectl argo rollouts set image NAME iris-api=IMAGE  kubectl argo rollouts promote NAME [--full]
+  kubectl argo rollouts abort NAME | undo NAME | retry rollout NAME | status NAME
+  kubectl get pods | rollout | analysisrun            kubectl describe analysisrun [NAME]
+  ./send_traffic.sh N        ./smoke_test.sh URL        curl http://iris.local/predict   curl http://preview.iris.local/predict
+  ls   cat FILE   clear
+Images: ketan/iris-api:1.0, 2.0, 2.1 (healthy) · ketan/iris-api:3.0 (a bad model: slow and erroring)`);return true}
+    if(c0==='ls'){t.print(Object.keys(S.files).join('  '));return true}
+    if(c0==='cat'){if(!(a[1]in S.files))return fail(t,`cat: ${a[1]||''}: No such file or directory`);t.print(S.files[a[1]]);return true}
+    if(c0==='kubectl')return kubectl(a.slice(1),t);
+    if(c0==='./send_traffic.sh'||(c0==='bash'&&a[1]==='send_traffic.sh')){const n=Math.min(1000,+(a[c0==='bash'?2:1]||50));if(!n)return fail(t,'usage: ./send_traffic.sh N');return traffic(n,t)}
+    if(c0==='./smoke_test.sh'||(c0==='bash'&&a[1]==='smoke_test.sh')){const url=a[c0==='bash'?2:1]||'';const host=(/\/\/([^/]+)/.exec(url)||[])[1];if(!host)return fail(t,'usage: ./smoke_test.sh http://preview.iris.local');const r=pick(host);if(!r)return fail(t,`curl: (6) Could not resolve host: ${host}`);
+      const ok=Q[r.image].err<1;t.print(`→ testing ${r.image} at ${url}\n  ✔ GET /health 200\n  ✔ POST /predict response matches schema\n  ${ok?'✔':'✖'} golden set: ${ok?'30/30':'26/30'} correct (min 95%)`);if(ok){t.print('SMOKE TEST PASSED','ok');return true}return fail(t,'SMOKE TEST FAILED')}
+    if(c0==='curl'){const url=a.find(x=>/iris\.local/.test(x));if(!url)return fail(t,'curl: try http://iris.local/predict or http://preview.iris.local/predict');const host=(/(?:\/\/)?([^/]+)/.exec(url.replace(/^https?:\/\//,''))||[])[1];const r=pick(host);
+      if(!r)return fail(t,`curl: (6) Could not resolve host: ${host} (this rollout has no preview service)`);const res=respond(r);t.print(res.body,res.code===200?'':'err');return res.code===200}
+    return fail(t,`bash: ${c0}: command not found`)}
+  function handle(raw,t){return runChain(raw,t,one)}
+  function render(el){const ro=S.ro;if(!ro){el.innerHTML='';return}const now=Date.now();const badge={Healthy:'b-ok',Paused:'b-warn',Progressing:'b-run',Degraded:'b-fail'}[ro.status];
+    const dots=(n,cls,pend)=>`<div class="dots2">${Array.from({length:n},()=>`<i class="${cls}${pend?' p':''}"></i>`).join('')}</div>`;let body='';
+    if(ro.strategy==='canary'){const c=ro.canary;const w=c&&!ro.aborted?ro.weight:0;const bad=c&&Q[c.image]&&Q[c.image].err>1;
+      body=`<div class="kv"><span>steps</span><span class="stepdots">${[0,1,2,3,4].map(i=>`<i class="${ro.step>i||ro.step===5?'on':ro.step===i&&c?'cur':''}"></i>`).join('')}</span></div>
+        <div class="tbar"><div class="tb-a" style="width:${100-w}%">${100-w>8?`stable ${100-w}%`:''}</div><div class="${bad?'tb-bad':'tb-b'}" style="width:${w}%">${w>8?`canary ${w}%`:''}</div></div>
+        <div class="kv"><span>stable · ${esc(ro.stable.image)}</span><span>${ro.replicas} pods</span></div>${dots(ro.replicas,'s')}
+        ${c?`<div class="kv" style="margin-top:6px"><span>canary · ${esc(c.image)}</span><span>${ro.aborted?'scaled to 0':imgOk(c.image)?(now>=c.readyAt?'ready':'starting'):'ImagePullBackOff'}</span></div>${ro.aborted?'':dots(Math.max(1,Math.ceil(ro.replicas*Math.max(20,w)/100)),bad?'x':'c',now<c.readyAt||!imgOk(c.image))}`:''}`}
+    else{const rows=[[ro.active,'active (iris.local)','s']];if(ro.preview)rows.push([ro.preview,'preview (preview.iris.local)','c']);if(ro.old&&!ro.old.down)rows.push([ro.old,`previous · scale-down in ${Math.max(0,Math.round((ro.oldDownAt-now)/1000))}s`,'s']);
+      body=`<div class="tbar"><div class="tb-a" style="width:100%">100% → ${esc(ro.active.image)}</div></div>`+rows.map(([r,l,c])=>`<div class="kv" style="margin-top:6px"><span>${l}</span><span>${esc(r.image)}</span></div>${dots(ro.replicas,c,now<r.readyAt)}`).join('')}
+    const a=S.ars[S.ars.length-1];
+    el.innerHTML=`<div class="pnl" style="border:0;padding:0;background:none"><div class="vh">🚦 Rollout <b>${ro.name}</b> <small><span class="badge ${badge}">${ro.status}</span> ${ro.strategy}</small></div>${body}
+      ${a?`<div class="kv" style="margin-top:8px"><span>analysis ${esc(a.name.slice(-14))}</span><span><span class="badge ${a.status==='Failed'?'b-fail':a.status==='Running'?'b-run':a.status==='Successful'?'b-ok':'b-gray'}">${a.status}</span> sr ${a.m['success-rate'].slice(-1)[0]??'—'} · p95 ${a.m['p95-latency'].slice(-1)[0]??'—'}s</span></div>`:''}
+      ${ro.message?`<div class="small muted" style="margin-top:6px;font-family:var(--mono);font-size:11.5px">${esc(ro.message)}</div>`:''}</div>`}
+  return sim}
+
+/* ---------------- scenarios ---------------- */
+const ciSim=createCISim();
+const ciScenarios=[
+ {title:'Your first CI run',desc:'Change a feature, open a pull request, watch CI catch a broken test, fix it, merge, and trigger CD.',
+  intro:'# Scenario A · CI on a pull request\n# Repo ~/iris-mlops. main is protected: changes must arrive through a PR with passing checks.',
+  steps:[
+   {cmd:'cat .github/workflows/ci.yml',match:/^cat \.github\/workflows\/ci\.yml/,note:'The CI workflow: on every PR, install, lint, unit test and validate data.'},
+   {cmd:'git checkout -b feature/petal-ratio',match:/^git (checkout -b|switch -c) \S+/,note:'Work on a branch, never directly on main.'},
+   {cmd:`echo 'FEATURES.append("petal_ratio")' >> src/features.py`,match:/^echo .*petal_ratio.*>> ?src\/features\.py/,note:'Add an engineered feature. (The test still expects 4 features.)'},
+   {cmd:'git add . && git commit -m "Add petal ratio feature"',match:/git commit/,note:'Stage and commit. <code>&amp;&amp;</code> runs the second command only if the first succeeds.'},
+   {cmd:'git push -u origin feature/petal-ratio',match:/^git push/,note:'Publish the branch.'},
+   {cmd:'gh pr create --fill',match:/^gh pr create/,note:'Open a pull request; this triggers the <code>ci</code> workflow.'},
+   {cmd:'gh run watch',match:/^gh run watch/,note:'Stream the run. Unit tests fail: CI caught it before any reviewer did.'},
+   {cmd:'pytest -q',match:/^pytest/,note:'Reproduce the failure locally.'},
+   {cmd:`sed -i 's/N_FEATURES = 4/N_FEATURES = 5/' tests/test_features.py`,match:/^sed -i .*N_FEATURES/,note:'The new feature is intentional, so update the test\'s expectation.'},
+   {cmd:'pytest -q',match:/^pytest/,note:'Green locally.'},
+   {cmd:'git commit -am "Expect 5 features"',match:/^git commit/,note:'<code>-a</code> stages modified tracked files.'},
+   {cmd:'git push',match:/^git push/,note:'A new commit on an open PR re-runs CI.'},
+   {cmd:'gh run watch',match:/^gh run watch/,note:'All green this time.'},
+   {cmd:'gh pr checks',match:/^gh pr checks/,note:'The merge requirement: every required check passes.'},
+   {cmd:'gh pr merge --squash --delete-branch',match:/^gh pr merge/,note:'Merge → push to main → the <code>cd</code> workflow builds, scans, pushes and deploys to staging.'},
+   {cmd:'gh run list',match:/^gh run list/,note:'History of CI and CD runs.'}],
+  tryThese:[
+   {cmd:'git push',why:'On <code>main</code> before branching → rejected: protected branch.'},
+   {cmd:'gh pr merge --squash',why:'While CI is failing or still running → not mergeable.'},
+   {cmd:'echo "import os" >> src/train.py',why:'Then commit, push and watch: the <b>Lint</b> step fails on an unused import. Run <code>ruff check .</code> locally.'},
+   {cmd:'gh run view --log-failed',why:'Read only the failing step\'s log.'},
+   {cmd:'git diff',why:'Before committing, see exactly what changed.'}]},
+ {title:'Reproducible pipeline with DVC',desc:'New data arrived. Rebuild the pipeline, tune a parameter, compare metrics, gate on quality and version everything.',
+  intro:'# Scenario B · DVC pipeline\n# New labelled rows landed in data/raw.csv (tracked by DVC). The model in git was trained on the old data.',
+  steps:[
+   {cmd:'git checkout -b exp/more-trees',match:/^git (checkout -b|switch -c) \S+/,note:'Experiments live on branches too.'},
+   {cmd:'cat dvc.yaml',match:/^cat dvc\.yaml/,note:'The pipeline as code: each stage has a command, dependencies, params and outputs.'},
+   {cmd:'dvc dag',match:/^dvc dag/,note:'Stages form a graph; DVC runs them in order.'},
+   {cmd:'dvc status',match:/^dvc status/,note:'Which stages are out of date, and why: <code>data/raw.csv</code> changed, so everything downstream did too.'},
+   {cmd:'dvc repro',match:/^dvc repro/,note:'Rebuild only what is stale (here: everything).'},
+   {cmd:'dvc metrics diff',match:/^dvc metrics diff/,note:'New data alone improved accuracy versus the committed model.'},
+   {cmd:`sed -i 's/n_estimators: 100/n_estimators: 300/' params.yaml`,match:/^sed -i .*n_estimators/,note:'Tune a hyperparameter in <code>params.yaml</code>, not in code.'},
+   {cmd:'dvc status',match:/^dvc status/,note:'Only <code>train</code> (and <code>evaluate</code>) are affected.'},
+   {cmd:'dvc repro',match:/^dvc repro/,note:'<code>prepare</code> and <code>featurize</code> are skipped from cache; only training reruns.'},
+   {cmd:'dvc params diff',match:/^dvc params diff/,note:'What changed in the parameters.'},
+   {cmd:'dvc metrics diff',match:/^dvc metrics diff/,note:'And what that did to the metrics.'},
+   {cmd:'python scripts/quality_gate.py --min-accuracy 0.90 --compare-to main',match:/^python3? scripts\/quality_gate\.py/,note:'The same gate CI runs: absolute floor <i>and</i> no regression vs main.'},
+   {cmd:'git add dvc.lock params.yaml && git commit -m "More trees: n_estimators=300"',match:/git commit/,note:'<code>dvc.lock</code> pins exact data/model hashes, so this commit fully reproduces the model.'},
+   {cmd:'dvc push',match:/^dvc push/,note:'Upload data and model to remote storage so CI and teammates can <code>dvc pull</code> them.'}],
+  tryThese:[
+   {cmd:'dvc repro',why:'Twice in a row: "didn\'t change, skipping". Pipelines are idempotent.'},
+   {cmd:`sed -i 's/max_depth: 5/max_depth: 2/' params.yaml`,why:'Then <code>dvc repro</code> and run the quality gate: it <b>fails</b> and would block the merge.'},
+   {cmd:'python scripts/quality_gate.py --min-accuracy 0.90',why:'Before <code>dvc repro</code>: refuses to judge stale metrics.'},
+   {cmd:'cat dvc.lock',why:'Hashes of every stage. Commit this file.'},
+   {cmd:'dvc metrics show',why:'Current metrics.json.'}]},
+ {title:'Track & register with MLflow',desc:'Log experiments to a shared tracking server, register the best run, compare it with the champion, promote it and package it.',
+  setup:S=>{S.ml.runs.push({id:'5be1f0c9a7d24f1e8b0c33aa91d7e612',name:'baseline-001',n:100,d:5,accuracy:0.927,f1:0.923,t:Date.now()-86400000*12,local:false,size:1.2,p95:8.2,baseline:true});S.ml.models['iris-classifier']={versions:[{v:1,run:S.ml.runs[0],aliases:['champion']}]}},
+  intro:'# Scenario C · experiments → registry → package\n# An MLflow tracking server runs at localhost:5000. Registry: iris-classifier v1 is @champion (acc 0.927).',
+  steps:[
+   {cmd:'export MLFLOW_TRACKING_URI=http://localhost:5000',match:/^export MLFLOW_TRACKING_URI=/,note:'Point training code at the shared server. Without this, runs stay on your laptop.'},
+   {cmd:'python src/train.py --n-estimators 100',match:/^python3? src\/train\.py/,note:'Each run logs params, metrics and the model.'},
+   {cmd:'python src/train.py --n-estimators 300',match:/^python3? src\/train\.py/,note:'Try another configuration.'},
+   {cmd:'python src/train.py --n-estimators 300 --max-depth 2',match:/^python3? src\/train\.py/,note:'And one that will be worse.'},
+   {cmd:'mlflow runs list --experiment-id 1',match:/^mlflow runs list/,note:'Everything is recorded, including the old baseline.'},
+   {cmd:'python scripts/runs_table.py',match:/^python3? scripts\/runs_table\.py/,note:'Runs ranked by accuracy; ★ marks the best new run.'},
+   {cmd:sim=>`python scripts/register.py --run-id ${sim.bestRun()} --name iris-classifier`,match:/^python3? scripts\/register\.py/,note:'Register the best run as a new model version.'},
+   {cmd:'python scripts/compare.py --challenger 2 --champion champion',match:/^python3? scripts\/compare\.py/,note:'Challenger vs champion on the same holdout: accuracy, latency and size.'},
+   {cmd:'python scripts/promote.py --name iris-classifier --version 2 --alias champion',match:/^python3? scripts\/promote\.py/,note:'Move the <code>@champion</code> alias. Serving code loads by alias, so no code changes.'},
+   {cmd:'mlflow models serve -m "models:/iris-classifier@champion" -p 5001 --env-manager local',match:/^mlflow models serve/,note:'Serve whatever the alias points to.'},
+   {cmd:`curl -X POST localhost:5001/invocations -H 'Content-Type: application/json' -d '{"inputs": [[5.1, 3.5, 1.4, 0.2]]}'`,match:/^curl .*invocations/,note:'Online prediction over REST.'},
+   {cmd:'mlflow models build-docker -m "models:/iris-classifier@champion" -n ketan/iris-api:2.0',match:/^mlflow models build-docker/,note:'Package model + environment into an image, the input to the deployment lab.'}],
+  tryThese:[
+   {cmd:'unset MLFLOW_TRACKING_URI',why:'Then train again: the run is only local and can\'t be registered.'},
+   {cmd:'python scripts/register.py --run-id deadbeef00 --name iris-classifier',why:'A run that doesn\'t exist.'},
+   {cmd:'curl localhost:5001/ping',why:'Before <code>mlflow models serve</code>: connection refused.'},
+   {cmd:'python scripts/compare.py --challenger 1 --champion champion',why:'Comparing a version with itself: no reason to promote.'}]}
+];
+const cdSim=createRolloutSim();
+const cdScenarios=[
+ {title:'Canary release',desc:'Ship iris-api 2.0 to 20% of traffic, let automated analysis watch it, then promote to 100%.',files:['rollout.yaml','analysis.yaml','send_traffic.sh'],setup:api=>api.canary(['ketan/iris-api:1.0']),
+  intro:'# Scenario A · canary\n# Rollout iris-api is Healthy on ketan/iris-api:1.0 (5 pods). Ship 2.0 safely.',
+  steps:[
+   {cmd:'cat rollout.yaml',match:/^cat rollout\.yaml/,note:'Canary steps: 20% → wait for a human → 50% → wait → 100%, with background analysis.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api',match:/^kubectl argo rollouts get rollout iris-api$/,note:'Healthy; one revision; 5 stable pods.'},
+   {cmd:'kubectl argo rollouts set image iris-api iris-api=ketan/iris-api:2.0',match:/^kubectl argo rollouts set image iris-api iris-api=\S+:2\.0/,note:'Start the release by changing the image.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api --watch',match:/^kubectl argo rollouts get rollout iris-api .*(--watch|-w)/,note:'Canary pod starts, weight goes to 20%, rollout pauses. An AnalysisRun starts.'},
+   {cmd:'./send_traffic.sh 100',match:/send_traffic\.sh/,note:'About 1 in 5 requests is answered by 2.0.'},
+   {cmd:'kubectl get analysisrun',match:/^kubectl get (analysisruns?|ar)/,note:'Metrics are being checked against Prometheus.'},
+   {cmd:'kubectl argo rollouts promote iris-api',match:/^kubectl argo rollouts promote iris-api$/,note:'Human approval for the next step → 50%, timed pause, then 100%.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api --watch',match:/^kubectl argo rollouts get rollout iris-api .*(--watch|-w)/,note:'Watch it walk through the steps to Healthy; 2.0 becomes stable.'},
+   {cmd:'./send_traffic.sh 100',match:/send_traffic\.sh/,note:'All traffic on 2.0.'}],
+  tryThese:[
+   {cmd:'kubectl argo rollouts abort iris-api',why:'Mid-canary: traffic snaps back to stable instantly.'},
+   {cmd:'kubectl argo rollouts promote iris-api --full',why:'Skip the remaining steps (use sparingly).'},
+   {cmd:'kubectl argo rollouts set image iris-api iris-api=ketan/iris-api:9.9',why:'An image that doesn\'t exist → ImagePullBackOff → Degraded. Stable keeps serving.'},
+   {cmd:'kubectl argo rollouts undo iris-api',why:'After a finished release: roll back to the previous revision (goes through the steps again).'},
+   {cmd:'kubectl get pods',why:'Stable and canary ReplicaSets side by side.'}]},
+ {title:'Automated rollback',desc:'A bad model (3.0) is slow and erroring. Analysis catches it at 20% and aborts the rollout without a human.',files:['rollout.yaml','analysis.yaml','send_traffic.sh'],setup:api=>api.canary(['ketan/iris-api:1.0','ketan/iris-api:2.0']),
+  intro:'# Scenario B · automated rollback\n# iris-api is Healthy on ketan/iris-api:2.0. Someone ships 3.0, which is broken.',
+  steps:[
+   {cmd:'cat analysis.yaml',match:/^cat analysis\.yaml/,note:'Two PromQL checks: success rate ≥ 99% and p95 latency &lt; 0.5 s. One failure aborts.'},
+   {cmd:'kubectl argo rollouts set image iris-api iris-api=ketan/iris-api:3.0',match:/^kubectl argo rollouts set image iris-api iris-api=\S+:3\.0/,note:'Ship the bad version.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api --watch',match:/^kubectl argo rollouts get rollout iris-api .*(--watch|-w)/,note:'Watch: 20% canary → analysis measures → <b>Degraded</b>, weight back to 0. Nobody had to wake up.'},
+   {cmd:'./send_traffic.sh 100',match:/send_traffic\.sh/,note:'Users are back on 2.0 with no errors (or you catch the brief 20% window).'},
+   {cmd:'kubectl get analysisrun',match:/^kubectl get (analysisruns?|ar)/,note:'The failed AnalysisRun.'},
+   {cmd:sim=>`kubectl describe analysisrun ${sim.arName()}`,match:/^kubectl describe (analysisruns?|ar)/,note:'Which metric failed and the measured values.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api',match:/^kubectl argo rollouts get rollout iris-api$/,note:'Still Degraded: the spec asks for 3.0 but it was aborted.'},
+   {cmd:'kubectl argo rollouts undo iris-api',match:/^kubectl argo rollouts undo iris-api/,note:'Set the spec back to the stable image; steps are skipped.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api',match:/^kubectl argo rollouts get rollout iris-api$/,note:'Healthy on 2.0 again.'}],
+  tryThese:[
+   {cmd:'kubectl argo rollouts promote iris-api',why:'On an aborted rollout → refused.'},
+   {cmd:'kubectl argo rollouts retry rollout iris-api',why:'Retry the same bad image: it fails analysis again.'},
+   {cmd:'curl http://iris.local/predict',why:'Single requests during the canary window can hit 3.0 errors.'}]},
+ {title:'Blue-green release',desc:'Bring up 2.1 next to 2.0, test it on a preview URL, switch all traffic at once, then roll back instantly.',files:['rollout-bluegreen.yaml','smoke_test.sh'],setup:api=>api.bluegreen('ketan/iris-api:2.0'),
+  intro:'# Scenario C · blue-green\n# iris-api-bg serves ketan/iris-api:2.0 on http://iris.local (active). preview.iris.local shows the next version.',
+  steps:[
+   {cmd:'cat rollout-bluegreen.yaml',match:/^cat rollout-bluegreen\.yaml/,note:'Two Services: active and preview. Promotion is manual; old version is kept for a while.'},
+   {cmd:'kubectl argo rollouts set image iris-api-bg iris-api=ketan/iris-api:2.1',match:/^kubectl argo rollouts set image iris-api-bg iris-api=\S+:2\.1/,note:'Green (2.1) starts alongside blue (2.0). No user traffic yet.'},
+   {cmd:'kubectl argo rollouts get rollout iris-api-bg',match:/^kubectl argo rollouts get rollout iris-api-bg/,note:'Paused with an active and a preview ReplicaSet (run again if still Progressing).'},
+   {cmd:'curl http://preview.iris.local/predict',match:/^curl .*preview\.iris\.local/,note:'Testers see 2.1…'},
+   {cmd:'curl http://iris.local/predict',match:/^curl .*\/\/iris\.local/,note:'…users still see 2.0.'},
+   {cmd:'./smoke_test.sh http://preview.iris.local',match:/smoke_test\.sh .*preview/,note:'Automated checks against the preview, before any user sees it.'},
+   {cmd:'kubectl argo rollouts promote iris-api-bg',match:/^kubectl argo rollouts promote iris-api-bg/,note:'Switch: 100% of traffic moves at once.'},
+   {cmd:'curl http://iris.local/predict',match:/^curl .*\/\/iris\.local/,note:'Users now get 2.1.'},
+   {cmd:'kubectl argo rollouts undo iris-api-bg',match:/^kubectl argo rollouts undo iris-api-bg/,note:'Second thoughts? Blue is still running, so rollback is a switch, not a deploy.'},
+   {cmd:'curl http://iris.local/predict',match:/^curl .*\/\/iris\.local/,note:'Back on 2.0.'}],
+  tryThese:[
+   {cmd:'kubectl argo rollouts set image iris-api-bg iris-api=ketan/iris-api:3.0',why:'Then smoke-test the preview: it fails and you simply never promote.'},
+   {cmd:'kubectl get pods',why:'During the release you run 2× the pods: blue-green\'s cost.'},
+   {cmd:'kubectl argo rollouts abort iris-api-bg',why:'Throw the preview away.'}]}
+];
+makeLab($('#ciLab'),{title:'Lab · CI terminal',termName:'bash — ~/iris-mlops',prompt:'ketan@laptop:~/iris-mlops$ ',sim:ciSim,scenarios:ciScenarios});
+makeLab($('#cdLab'),{title:'Lab · deployment terminal',cls:'kube',termName:'bash — ~/deploy',prompt:'ketan@laptop:~/deploy$ ',sim:cdSim,scenarios:cdScenarios});
+
+/* ---------------- 01 release simulation ---------------- */
+(function(){const grid=$('#relGrid'),out=$('#relOut');grid.innerHTML=Array.from({length:10},(_,i)=>`<i>${i+1}</i>`).join('');
+  const MAN=[['wrong pickle copied (yesterday\'s model)',0.12],['requirements drifted: sklearn version mismatch',0.12],['notebook cells run out of order → stale features',0.1],['accuracy "looked fine" but was on training data',0.08],['service restarted mid-traffic → 3 min outage',0.08]];
+  const PIPE=[['unit test caught a feature bug',0.12],['data validation caught a renamed column',0.1],['quality gate rejected a worse model',0.1],['canary analysis rolled back a slow model',0.08]];
+  function sim(kind){const rnd=Math.random;const cells=$$('i',grid);const lines=[];let inc=0,caught=0;
+    cells.forEach((c,i)=>{c.className='';let res='ok',why='';for(const[w,p]of(kind==='m'?MAN:PIPE)){if(rnd()<p){res=kind==='m'?'bad':'caught';why=w;break}}
+      if(kind==='p'&&res==='caught'&&why.startsWith('canary'))res='caught';c.className=res;if(res==='bad'){inc++;lines.push(`<span class="e">#${i+1} incident: ${why}</span>`)}else if(res==='caught'){caught++;lines.push(`<span class="w">#${i+1} stopped: ${why}</span>`)}});
+    out.innerHTML=(kind==='m'?`<span class="p">manual</span> 10 releases → <span class="${inc?'e':'o'}">${inc} production incident${inc===1?'':'s'}</span>\n`:`<span class="p">pipeline</span> 10 releases → <span class="o">0 production incidents</span>, ${caught} bad change${caught===1?'':'s'} stopped by a gate\n`)+lines.join('\n')+(kind==='m'?'\n<span class="d">Mistakes reach users, and nobody knows which step to blame.</span>':'\n<span class="d">The same mistakes still happen; they just get stopped early and automatically.</span>')}
+  $('#relManual').onclick=()=>sim('m');$('#relPipe').onclick=()=>sim('p')})();
+
+/* ---------------- 02 CI/CD/CT chips ---------------- */
+(function(){const D={ci:[[0,1,2],'<b>Continuous Integration</b>: every change is merged frequently and automatically built and tested (lint, unit tests, data checks). It answers “is this change safe to merge?”'],
+  cdl:[[0,1,2,3,4,5,6],'<b>Continuous Delivery</b>: every change that passes CI is automatically packaged and deployed to staging, so it is <i>always releasable</i>. Production still needs a human to press approve.'],
+  cdp:[[0,1,2,3,4,5,7],'<b>Continuous Deployment</b>: same as delivery but with no manual gate: every passing change goes straight to production, usually via canary with automated analysis.'],
+  ct:[[2,3,4,8],'<b>Continuous Training</b> (ML-specific): the pipeline retrains and re-validates the model automatically, triggered by new data, a schedule or a monitoring alert (drift, accuracy drop), then hands the new model to CD.']};
+  $$('#ciChips .cchip').forEach(b=>b.onclick=()=>{$$('#ciChips .cchip').forEach(x=>x.classList.toggle('on',x===b));const[on,txt]=D[b.dataset.k];$$('#ciPipe .stg').forEach(s=>{const i=+s.dataset.i;s.classList.toggle('hl',on.includes(i));s.classList.toggle('dim',!on.includes(i))});$('#ciExp').innerHTML=`<p style="margin:0">${txt}</p>`})})();
+
+/* ---------------- 03 pipeline runner ---------------- */
+(function(){let mode='delivery';const ST=[['source','Checkout',0.4],['ci','Lint & unit tests',1.2,'test'],['ci','Data validation',0.9,'schema'],['ml','Train',2.4],['ml','Evaluate vs champion',0.9,'model',1],['pkg','Register model',0.3],['pkg','Build & scan image',1.6,'cve',1],['cd','Deploy to staging',0.8],['cd','Smoke tests',0.7,'smoke',1],['cd','Approval',0,'approve',1],['cd','Canary to prod',1.4]];
+  const LOG={test:'FAILED tests/test_features.py::test_feature_columns - assert 5 == 4\n1 failed, 11 passed',schema:'great_expectations: expect_column_to_exist("petal_width") FAILED\n  column not found; did you mean "petal_width_cm"?\nCheckpoint failed: 1 of 14 expectations unmet',model:'challenger accuracy 0.861 < champion 0.933 − 0.005\nQuality gate FAILED: model not registered',cve:'trivy: ghcr.io/ketan/iris-api:7c1e2f0\n  CRITICAL  CVE-2024-xxxx  openssl 3.0.11  fixed in 3.0.13\nTotal: 1 (CRITICAL: 1) → exit code 1',smoke:'POST /predict → 500 Internal Server Error\nKeyError: \'petal_ratio\' (feature missing at serving time: training/serving skew)'};
+  const pipe=$('#mlPipe'),log=$('#pLog');let running=false,tok=0;
+  function draw(){pipe.innerHTML=ST.map((s,i)=>`<div class="stg${s[4]?' gate':''}${s[3]==='approve'&&mode==='deployment'?' skip':''}" data-i="${i}"><div class="n">${s[0]}</div><div class="nm">${s[1]}</div><div class="tm"></div></div>`).join('')}
+  $$('#modeTog button').forEach(b=>b.onclick=()=>{if(running)return;mode=b.dataset.m;$$('#modeTog button').forEach(x=>x.classList.toggle('on',x===b));draw()});
+  $('#pRun').onclick=()=>{const my=++tok;running=true;draw();const faults=new Set($$('#faults input').filter(x=>x.checked).map(x=>x.dataset.f));const cells=$$('.stg',pipe);let i=0,tot=0;log.innerHTML='<span class="d">▶ pipeline started by push to main (7c1e2f0)</span>';
+    const add=(h)=>{log.innerHTML+='\n'+h;log.scrollTop=log.scrollHeight};
+    const step=()=>{if(my!==tok)return;if(i>=ST.length){add(`<span class="o">✔ released to production in ${tot.toFixed(1)} min</span>`);running=false;return}
+      const s=ST[i],c=cells[i];if(s[3]==='approve'&&mode==='deployment'){c.querySelector('.tm').textContent='skipped';i++;step();return}
+      c.classList.add('run');setTimeout(()=>{if(my!==tok)return;c.classList.remove('run');
+        if(s[3]&&faults.has(s[3])){c.classList.add('fail');c.querySelector('.tm').textContent='✖ failed';add(`<span class="e">✖ ${s[1]}</span>\n<span class="e">${esc(LOG[s[3]])}</span>`);for(let j=i+1;j<ST.length;j++)cells[j].classList.add('skip');
+          const cost=i<=2?'minutes after the commit, before any compute was spent on training':i<=6?'before anything was deployed':'in staging: no user ever saw it';add(`<span class="w">Pipeline stopped at stage ${i+1}: caught ${cost}.</span>`);running=false;return}
+        if(s[3]==='approve'){c.classList.add('ok');c.querySelector('.tm').textContent='✔ approved by ketan';add('<span class="d">⏸ waited for a human: "Approve deploy to production?" → approved</span>')}
+        else{c.classList.add('ok');tot+=s[2];c.querySelector('.tm').textContent=`✔ ${s[2]} min`;add(`<span class="o">✔ ${s[1]}</span>`)}i++;step()},s[3]==='approve'?900:450+s[2]*180)};step()};
+  draw()})();
+
+/* ---------------- 05 strategies ---------------- */
+(function(){const S={
+  recreate:{n:'Recreate',p:[[100,0,'v1 serves everyone.'],[0,0,'All v1 pods are stopped… users get errors (downtime).'],[0,100,'v2 pods start and take all traffic.']],info:'Kill the old version, then start the new one. Simplest, but there is a gap with no service and no quick way back.'},
+  rolling:{n:'Rolling',p:[[100,0,'v1 serves everyone.'],[75,25,'One pod replaced at a time…'],[50,50,'Half and half: both versions serve at once.'],[25,75,'…'],[0,100,'All pods on v2.']],info:'Kubernetes\' default: replace pods gradually. No downtime, but you can\'t choose who gets v2, and there is no automatic metric check.'},
+  bluegreen:{n:'Blue-green',p:[[100,0,'Blue (v1) is live.'],[100,0,'Green (v2) is fully deployed and tested on a preview URL. Zero users on it.'],[0,100,'Switch the router: 100% to green at once.'],[0,100,'Blue stays up for a while → rollback is just switching back.']],info:'Two full environments. Instant cutover and instant rollback; costs double capacity during the release.'},
+  canary:{n:'Canary',p:[[100,0,'v1 serves everyone.'],[95,5,'5% of traffic to v2; compare error rate and latency.'],[80,20,'Metrics healthy → 20%.'],[50,50,'Still healthy → 50%.'],[0,100,'Promote: v2 is the new stable.']],info:'Expose a small slice first and widen it while metrics stay healthy. With automated analysis, a bad model is rolled back before most users see it.'},
+  shadow:{n:'Shadow',p:[[100,0,'v1 serves everyone.'],[100,0,'Every request is <b>also</b> copied to v2; its answers are logged and thrown away.',1],[100,0,'Compare v1 vs v2 predictions, latency and errors offline.',1],[0,100,'Confident? Release v2 (e.g. by canary).']],info:'Zero user risk: test a new model on real traffic without showing its output. Costs extra compute; doesn\'t work for actions with side effects.'},
+  ab:{n:'A/B test',p:[[100,0,'v1 serves everyone.'],[50,50,'Users are split by a stable key (user ID) into A and B.'],[50,50,'Run for a fixed period; measure a <b>business</b> metric (conversion, revenue).'],[0,100,'B wins with statistical significance → roll out B.']],info:'An experiment, not a safety mechanism: answers “which model is better for the business?” rather than “is it broken?”.'}};
+  let cur='canary',ph=0;const chips=$('#stratChips');
+  Object.entries(S).forEach(([k,v])=>{const b=document.createElement('button');b.className='cchip';b.textContent=v.n;b.onclick=()=>{cur=k;ph=0;draw()};chips.appendChild(b)});
+  function draw(){const s=S[cur],p=s.p[ph];$$('.cchip',chips).forEach(b=>b.classList.toggle('on',b.textContent===s.n));const mirror=p[3];
+    const box=(name,pct,cls,extra)=>`<div class="ver ${pct===0&&!extra?'off':''}"><div class="hd"><span>${name}</span><span class="pct">${extra||pct+'%'}</span></div><div class="bar"><i class="${cls}" style="width:${extra?100:pct}%"></i></div></div>`;
+    $('#stratVers').innerHTML=box('v1 · iris-api:2.0',p[0],'ct')+box('v2 · iris-api:2.1',p[1],'vm',mirror?'mirror (100% copy)':null);
+    $('#stratInfo').innerHTML=`<h3>${s.n}</h3><p class="small" style="margin-top:0">${s.info}</p><div class="callout k" style="margin:0"><b>Phase ${ph+1}/${s.p.length}:</b> ${p[2]}</div>`;$('#stratProg').textContent=`phase ${ph+1} / ${s.p.length}`;$('#stratNext').disabled=ph>=s.p.length-1}
+  $('#stratNext').onclick=()=>{ph++;draw()};$('#stratReset').onclick=()=>{ph=0;draw()};draw()})();
+
+/* ---------------- reference / quiz / activities ---------------- */
+renderReference([
+ ['git','git checkout -b feature/x','Create and switch to a branch'],['git','git add . && git commit -m "msg"','Stage everything and commit'],['git','git commit -am "msg"','Commit all modified tracked files'],['git','git push -u origin feature/x','Publish a branch and track it'],['git','git diff','Show unstaged changes'],['git','git log --oneline','Compact history'],
+ ['gh','gh pr create --fill','Open a PR using the commit message'],['gh','gh pr checks','Status of required checks on the PR'],['gh','gh pr merge --squash --delete-branch','Merge when checks pass and clean up'],['gh','gh run watch','Stream the latest workflow run'],['gh','gh run list','Recent workflow runs'],['gh','gh run view --log-failed','Only the logs of failed steps'],['gh','gh workflow run retrain.yml -f reason=drift','Trigger a workflow_dispatch workflow manually'],
+ ['ci','pytest -q','Run unit tests quietly'],['ci','ruff check .','Lint Python code'],['ci','python scripts/quality_gate.py --min-accuracy 0.90 --compare-to main','Fail if the model is below the floor or worse than main'],['ci','trivy image --severity CRITICAL IMAGE','Scan an image for vulnerabilities'],
+ ['dvc','dvc init','Initialise DVC in a git repo'],['dvc','dvc add data/raw.csv','Track a large file (creates raw.csv.dvc)'],['dvc','dvc remote add -d storage s3://bucket/path','Configure remote storage'],['dvc','dvc dag','Show the pipeline graph'],['dvc','dvc status','Which stages are out of date and why'],['dvc','dvc repro','Run only the stale stages of dvc.yaml'],['dvc','dvc metrics show / diff','Show metrics / compare with HEAD'],['dvc','dvc params diff','Compare params with HEAD'],['dvc','dvc push / dvc pull','Upload / download data and models'],['dvc','dvc exp run -S train.n_estimators=300','Run an experiment with a param override'],
+ ['mlflow','export MLFLOW_TRACKING_URI=http://host:5000','Log to a shared tracking server'],['mlflow','mlflow server --backend-store-uri sqlite:///mlflow.db','Run a tracking server'],['mlflow','mlflow ui','Local UI on :5000'],['mlflow','mlflow runs list --experiment-id 1','List runs'],['mlflow','mlflow models serve -m "models:/NAME@champion" -p 5001','Serve a registered model over REST'],['mlflow','mlflow models build-docker -m URI -n IMAGE','Package a model as a container image'],['mlflow','client.set_registered_model_alias(name, "champion", v)','Python API: move an alias to a version'],
+ ['argo','kubectl argo rollouts get rollout NAME --watch','Live view of a rollout'],['argo','kubectl argo rollouts set image NAME c=IMAGE','Start a new release'],['argo','kubectl argo rollouts promote NAME [--full]','Advance past a pause (or skip all steps)'],['argo','kubectl argo rollouts abort NAME','Send all traffic back to stable'],['argo','kubectl argo rollouts undo NAME','Rollback: return to the previous revision'],['argo','kubectl argo rollouts get rollout NAME','Check status after an abort or rollback'],['argo','kubectl argo rollouts retry rollout NAME','Retry an aborted rollout'],['argo','kubectl get analysisrun','Metric checks run during releases'],['argo','kubectl describe analysisrun NAME','Which metric failed, with values']
+],['git','gh','ci','dvc','mlflow','argo']);
+renderQuiz([
+ ['A teammate pushed a change and you want to know, before review, whether it breaks tests. What gives you that?',['Continuous deployment','Continuous integration on the pull request','A canary release','Model registry'],1,'CI runs on every PR and reports checks back to it.'],
+ ['What is the difference between continuous delivery and continuous deployment?',['Delivery uses Docker, deployment uses Kubernetes','Delivery keeps a manual approval before production; deployment ships automatically','Deployment skips tests','There is none'],1,'Both keep the code always releasable; only deployment removes the human gate.'],
+ ['You changed only n_estimators in params.yaml. What does dvc repro run?',['Every stage','Only train and evaluate; prepare and featurize are skipped','Nothing','Only prepare'],1,'DVC hashes each stage\'s inputs; only stages depending on train params (and downstream) are stale.'],
+ ['Which file lets a commit reproduce the exact data and model hashes of a pipeline run?',['params.yaml','dvc.yaml','dvc.lock','requirements.txt'],2,'dvc.yaml defines the pipeline; dvc.lock records the hashes of the run. Commit both.'],
+ ['Your serving code loads models:/iris-classifier@champion. How do you release version 7 without a code change?',['Rebuild the image','Move the champion alias to version 7','Delete version 6','Rename the model'],1,'Aliases decouple “which version” from code. Moving the alias is the release.'],
+ ['Which strategy gives the fastest rollback because the old version is still running?',['Recreate','Rolling update','Blue-green','A/B test'],2,'Blue keeps running after the switch, so rollback is flipping traffic back.'],
+ ['A canary of a new model shows 4% errors at 20% traffic. With an AnalysisTemplate (failureLimit 0), what happens?',['Nothing until a human checks','The rollout continues to 50%','The rollout aborts and traffic returns to stable','The cluster restarts'],2,'A failed measurement aborts the rollout automatically.'],
+ ['You want to see how a risky new model behaves on real traffic without any user seeing its predictions.',['Canary','Shadow deployment','Blue-green','Recreate'],1,'Shadow mirrors traffic to the new model and discards its responses.'],
+ ['Why build the container image once and promote it by digest?',['Digests are shorter','So production runs exactly what was tested in staging','Tags are not allowed in Kubernetes','To skip scanning'],1,'Rebuilding for prod can pull different dependencies; a digest pins the exact bytes.']]);
+renderActivities([
+ ['Break the build on purpose','CI lab · Scenario A',['Add <code>import os</code> to <code>src/train.py</code>, commit and push on a PR.','Watch the <b>Lint</b> step fail; read it with <code>gh run view --log-failed</code>.','Fix it, push, and get the PR to green.','Write one sentence: why lint before tests?']],
+ ['Find the cheapest stage','Section 03 pipeline runner',['Run with each fault switched on, one at a time.','Note the stage where each is caught.','Order the faults from “cheapest to catch” to “most expensive” and explain.']],
+ ['Tune without breaking main','CI lab · Scenario B',['Try <code>max_depth: 2</code>, <code>dvc repro</code>, and run the quality gate.','Revert, try <code>n_estimators: 300</code> and pass the gate.','Explain what <code>dvc.lock</code> adds to a commit.']],
+ ['Champion vs challenger','CI lab · Scenario C',['Train three configs; register two of them.','Compare each with the champion; promote only the winner.','How would you roll back if the new champion misbehaves in production?']],
+ ['Let the robots roll back','Deployment lab · Scenario B',['Ship 3.0 and watch the AnalysisRun.','Describe the failed run: which metric, which values?','Change one threshold in <code>analysis.yaml</code> (on paper) that would have let it through. Why is that dangerous?']],
+ ['Design a release policy','Pairs · 10 minutes',['For a fraud model: which strategy (canary / shadow / blue-green / A/B) and why?','For a nightly batch scoring job?','What metrics would your AnalysisTemplate check for each?']]]);
+initToc();
+
+</script>
+</body>
+</html>
